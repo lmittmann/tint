@@ -1,8 +1,6 @@
 package tint
 
-import (
-	"sync"
-)
+import "sync"
 
 type buffer []byte
 

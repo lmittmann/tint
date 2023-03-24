@@ -1,5 +1,5 @@
 /*
-Package tint provides a [slog.Handler] that prints tinted logs. The output
+Package tint provides a [slog.Handler] that writes tinted logs. The output
 format is inspired by the [zerolog.ConsoleWriter].
 
 [zerolog.ConsoleWriter]: https://pkg.go.dev/github.com/rs/zerolog#ConsoleWriter
@@ -11,7 +11,6 @@ import (
 	"encoding"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -21,74 +20,86 @@ import (
 )
 
 var (
-	defaultOut        = os.Stderr
-	defaultLvl        = slog.LevelInfo
+	defaultLevel      = slog.LevelInfo
 	defaultTimeFormat = time.StampMilli
 
-	lvlStrings = map[slog.Level]string{
+	levelStrings = map[slog.Level]string{
 		slog.LevelDebug: "DBG",
 		slog.LevelInfo:  "\033[92mINF\033[0m",
-		slog.LevelWarn:  "\033[33mWRN\033[0m",
+		slog.LevelWarn:  "\033[93mWRN\033[0m",
 		slog.LevelError: "\033[91mERR\033[0m",
 	}
 )
 
-// Handler implements a [slog.Handler].
-type Handler struct {
-	once   sync.Once
+// Options for a slog.Handler that writes tinted logs. A zero Options consists
+// entirely of default values.
+type Options struct {
+	// Minimum level to log (Default: slog.InfoLevel)
+	Level slog.Level
+
+	// Time format (Default: time.StampMilli)
+	TimeFormat string
+}
+
+// NewHandler creates a [slog.Handler] that writes tinted logs to w with the
+// given options.
+func (opts Options) NewHandler(w io.Writer) slog.Handler {
+	h := &handler{
+		w:          w,
+		level:      opts.Level,
+		timeFormat: opts.TimeFormat,
+	}
+	if h.level < slog.LevelDebug {
+		h.level = defaultLevel
+	}
+	if h.timeFormat == "" {
+		h.timeFormat = defaultTimeFormat
+	}
+	return h
+}
+
+// NewHandler creates a [slog.Handler] that writes tinted logs to w, using the default
+// options.
+func NewHandler(w io.Writer) slog.Handler {
+	return (Options{}).NewHandler(w)
+}
+
+// handler implements a [slog.handler].
+type handler struct {
 	attrs  []byte
 	groups []byte
 
-	mu  sync.Mutex
-	Out io.Writer // Output writer (Default: os.Stderr)
+	mu sync.Mutex
+	w  io.Writer // Output writer
 
-	Level      slog.Level // Minimum level to log (Default: slog.InfoLevel)
-	TimeFormat string     // Time format (Default: time.StampMilli)
+	level      slog.Level // Minimum level to log (Default: slog.InfoLevel)
+	timeFormat string     // Time format (Default: time.StampMilli)
 }
 
-// init sets all unset fields to their defaults.
-func (h *Handler) init() {
-	if h.Out == nil {
-		h.Out = defaultOut
-	}
-	if h.Level < slog.LevelDebug {
-		h.Level = defaultLvl
-	}
-	if h.TimeFormat == "" {
-		h.TimeFormat = defaultTimeFormat
-	}
-}
-
-func (h *Handler) clone() *Handler {
-	h2 := &Handler{
+func (h *handler) clone() *handler {
+	return &handler{
 		attrs:      h.attrs,
 		groups:     h.groups,
-		Out:        h.Out,
-		Level:      h.Level,
-		TimeFormat: h.TimeFormat,
+		w:          h.w,
+		level:      h.level,
+		timeFormat: h.timeFormat,
 	}
-	h2.once.Do(func() {})
-	return h2
 }
 
-func (h *Handler) Enabled(ctx context.Context, lvl slog.Level) bool {
-	h.once.Do(h.init)
-
-	return lvl >= h.Level
+func (h *handler) Enabled(_ context.Context, level slog.Level) bool {
+	return level >= h.level
 }
 
-func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
-	h.once.Do(h.init)
-
+func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	// get a buffer from the sync pool
 	buf := newBuffer()
 	defer buf.Free()
 
 	// write time, level, and message
 	buf.WriteString("\033[2m")
-	*buf = r.Time.AppendFormat(*buf, h.TimeFormat)
+	*buf = r.Time.AppendFormat(*buf, h.timeFormat)
 	buf.WriteString("\033[0m ")
-	buf.WriteString(lvlStrings[r.Level])
+	buf.WriteString(levelStrings[r.Level])
 	buf.WriteByte(' ')
 	buf.WriteString(r.Message)
 
@@ -107,13 +118,11 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	_, err := h.Out.Write(*buf)
+	_, err := h.w.Write(*buf)
 	return err
 }
 
-func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	h.once.Do(h.init)
-
+func (h *handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	if len(attrs) == 0 {
 		return h
 	}
@@ -131,9 +140,7 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return h2
 }
 
-func (h *Handler) WithGroup(name string) slog.Handler {
-	h.once.Do(h.init)
-
+func (h *handler) WithGroup(name string) slog.Handler {
 	if name == "" {
 		return h
 	}
@@ -142,7 +149,7 @@ func (h *Handler) WithGroup(name string) slog.Handler {
 	return h2
 }
 
-func (h *Handler) appendAttr(buf *buffer, attr slog.Attr) {
+func (h *handler) appendAttr(buf *buffer, attr slog.Attr) {
 	if attr.Value.Kind() == slog.KindAny {
 		if err, ok := attr.Value.Any().(tintError); ok {
 			// append tintError
@@ -155,7 +162,7 @@ func (h *Handler) appendAttr(buf *buffer, attr slog.Attr) {
 	appendValue(buf, attr.Value)
 }
 
-func (h *Handler) appendKey(buf *buffer, key string) {
+func (h *handler) appendKey(buf *buffer, key string) {
 	buf.WriteString("\033[2m")
 	if len(h.groups) > 0 {
 		buf.Write(h.groups)
@@ -193,7 +200,7 @@ func appendValue(buf *buffer, v slog.Value) {
 	}
 }
 
-func (h *Handler) appendTintError(buf *buffer, err error) {
+func (h *handler) appendTintError(buf *buffer, err error) {
 	buf.WriteString("\033[91;2m")
 	if len(h.groups) > 0 {
 		buf.Write(h.groups)
