@@ -29,8 +29,8 @@ go get github.com/lmittmann/tint
 logger := slog.New(tint.NewHandler(os.Stderr))
 
 // set global logger with custom options
-slog.SetDefault(slog.New((tint.Options{
+slog.SetDefault(slog.New(tint.Options{
 	Level:      slog.LevelDebug,
 	TimeFormat: time.Kitchen,
-}).NewHandler(os.Stderr)))
+}.NewHandler(os.Stderr)))
 ```
