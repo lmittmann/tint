@@ -34,3 +34,11 @@ slog.SetDefault(slog.New(tint.Options{
 	TimeFormat: time.Kitchen,
 }.NewHandler(os.Stderr)))
 ```
+
+### Windows
+
+ANSI color support in the terminal on Windows can be enabled by using e.g. [`go-colorable`](https://github.com/mattn/go-colorable).
+
+```go
+logger := slog.New(tint.NewHandler(colorable.NewColorableStderr()))
+```
