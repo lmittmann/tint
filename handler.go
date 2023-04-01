@@ -34,14 +34,12 @@ var (
 // Options for a slog.Handler that writes tinted logs. A zero Options consists
 // entirely of default values.
 type Options struct {
-	// Minimum level to log (Default: slog.InfoLevel)
-	Level slog.Level
-
-	// Time format (Default: time.StampMilli)
-	TimeFormat string
-
 	// Specifies the function to run when write
 	OnWrite func(level slog.Level, message string)
+	// Time format (Default: time.StampMilli)
+	TimeFormat string
+	// Minimum level to log (Default: slog.InfoLevel)
+	Level slog.Level
 }
 
 // NewHandler creates a [slog.Handler] that writes tinted logs to w with the
@@ -72,17 +70,14 @@ func NewHandler(w io.Writer) slog.Handler {
 
 // handler implements a [slog.handler].
 type handler struct {
-	attrs  []byte
-	groups []byte
-
-	mu sync.Mutex
-	w  io.Writer // Output writer
-
-	level      slog.Level // Minimum level to log (Default: slog.InfoLevel)
-	timeFormat string     // Time format (Default: time.StampMilli)
-
+	w io.Writer // Output writer
 	// function executed in a new goroutine at each write
-	onWrite func(level slog.Level, message string)
+	onWrite    func(level slog.Level, message string)
+	timeFormat string // Time format (Default: time.StampMilli)
+	attrs      []byte
+	groups     []byte
+	level      slog.Level // Minimum level to log (Default: slog.InfoLevel)
+	mu         sync.Mutex
 }
 
 func (h *handler) clone() *handler {
