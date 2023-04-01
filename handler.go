@@ -39,6 +39,9 @@ type Options struct {
 
 	// Time format (Default: time.StampMilli)
 	TimeFormat string
+
+	// Specifies the function to run when write
+	OnWrite func(level slog.Level, message string)
 }
 
 // NewHandler creates a [slog.Handler] that writes tinted logs to w with the
@@ -54,6 +57,9 @@ func (opts Options) NewHandler(w io.Writer) slog.Handler {
 	}
 	if h.timeFormat == "" {
 		h.timeFormat = defaultTimeFormat
+	}
+	if opts.OnWrite != nil {
+		h.onWrite = opts.OnWrite
 	}
 	return h
 }
@@ -74,6 +80,9 @@ type handler struct {
 
 	level      slog.Level // Minimum level to log (Default: slog.InfoLevel)
 	timeFormat string     // Time format (Default: time.StampMilli)
+
+	// function executed in a new goroutine at each write
+	onWrite func(level slog.Level, message string)
 }
 
 func (h *handler) clone() *handler {
@@ -119,6 +128,11 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	defer h.mu.Unlock()
 
 	_, err := h.w.Write(*buf)
+
+	if h.onWrite != nil {
+		go h.onWrite(r.Level, r.Message)
+	}
+
 	return err
 }
 
