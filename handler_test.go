@@ -10,7 +10,7 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-func TestShort(t *testing.T) {
+func TestExample(t *testing.T) {
 	slog.SetDefault(slog.New(tint.Options{
 		Level:      slog.LevelDebug,
 		TimeFormat: time.Kitchen,
