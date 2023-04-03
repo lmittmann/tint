@@ -66,8 +66,8 @@ func NewHandler(w io.Writer) slog.Handler {
 
 // handler implements a [slog.handler].
 type handler struct {
-	attrs  []byte
-	groups []byte
+	attrs  string
+	groups string
 
 	mu sync.Mutex
 	w  io.Writer // Output writer
@@ -105,13 +105,12 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 
 	// write handler attributes
 	if len(h.attrs) > 0 {
-		buf.Write(h.attrs)
+		buf.WriteString(h.attrs)
 	}
 
 	// write attributes
 	r.Attrs(func(attr slog.Attr) {
-		buf.WriteByte(' ')
-		h.appendAttr(buf, attr)
+		h.appendAttr(buf, attr, "")
 	})
 	buf.WriteByte('\n')
 
@@ -133,10 +132,9 @@ func (h *handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 
 	// write attributes to buffer
 	for _, attr := range attrs {
-		buf.WriteByte(' ')
-		h.appendAttr(buf, attr)
+		h.appendAttr(buf, attr, "")
 	}
-	h2.attrs = append(h.attrs, *buf...)
+	h2.attrs = h.attrs + string(*buf)
 	return h2
 }
 
@@ -145,29 +143,34 @@ func (h *handler) WithGroup(name string) slog.Handler {
 		return h
 	}
 	h2 := h.clone()
-	h2.groups = append(append(h2.groups, name...), '.')
+	h2.groups = h2.groups + name + "."
 	return h2
 }
 
-func (h *handler) appendAttr(buf *buffer, attr slog.Attr) {
-	if attr.Value.Kind() == slog.KindAny {
+func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groups string) {
+	if kind := attr.Value.Kind(); kind == slog.KindGroup {
+		groups = groups + attr.Key + "."
+		for _, groupAttr := range attr.Value.Group() {
+			h.appendAttr(buf, groupAttr, groups)
+		}
+		return
+	} else if kind == slog.KindAny {
 		if err, ok := attr.Value.Any().(tintError); ok {
 			// append tintError
-			h.appendTintError(buf, err)
+			buf.WriteByte(' ')
+			h.appendTintError(buf, err, groups)
 			return
 		}
 	}
 
-	h.appendKey(buf, attr.Key)
+	buf.WriteByte(' ')
+	h.appendKey(buf, attr.Key, groups)
 	appendValue(buf, attr.Value)
 }
 
-func (h *handler) appendKey(buf *buffer, key string) {
+func (h *handler) appendKey(buf *buffer, key string, groups string) {
 	buf.WriteString("\033[2m")
-	if len(h.groups) > 0 {
-		buf.Write(h.groups)
-	}
-	appendString(buf, key)
+	appendString(buf, h.groups+groups+key)
 	buf.WriteString("=\033[0m")
 }
 
@@ -200,12 +203,10 @@ func appendValue(buf *buffer, v slog.Value) {
 	}
 }
 
-func (h *handler) appendTintError(buf *buffer, err error) {
+func (h *handler) appendTintError(buf *buffer, err error, groups string) {
 	buf.WriteString("\033[91;2m")
-	if len(h.groups) > 0 {
-		buf.Write(h.groups)
-	}
-	buf.WriteString("err=\033[22m")
+	appendString(buf, h.groups+groups+"err")
+	buf.WriteString("=\033[22m")
 	appendString(buf, err.Error())
 	buf.WriteString("\033[0m")
 }
