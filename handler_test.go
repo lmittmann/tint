@@ -3,13 +3,14 @@ package tint_test
 import (
 	"errors"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/lmittmann/tint"
 	"golang.org/x/exp/slog"
 )
 
-func Example() {
+func TestShort(t *testing.T) {
 	slog.SetDefault(slog.New(tint.Options{
 		Level:      slog.LevelDebug,
 		TimeFormat: time.Kitchen,
