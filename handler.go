@@ -20,7 +20,6 @@ import (
 )
 
 var (
-	defaultLevel      = slog.LevelInfo
 	defaultTimeFormat = time.StampMilli
 
 	levelStrings = map[slog.Level]string{
@@ -48,9 +47,6 @@ func (opts Options) NewHandler(w io.Writer) slog.Handler {
 		w:          w,
 		level:      opts.Level,
 		timeFormat: opts.TimeFormat,
-	}
-	if h.level < slog.LevelDebug {
-		h.level = defaultLevel
 	}
 	if h.timeFormat == "" {
 		h.timeFormat = defaultTimeFormat
