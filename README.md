@@ -4,9 +4,9 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/lmittmann/tint)](https://goreportcard.com/report/github.com/lmittmann/tint)
 
 <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/3458786/227801217-5f2d6966-8112-4753-8cbd-409fb1a43141.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/3458786/227801217-5f2d6966-8112-4753-8cbd-409fb1a43141.png">
-    <img src="https://user-images.githubusercontent.com/3458786/227801217-5f2d6966-8112-4753-8cbd-409fb1a43141.png">
+    <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/3458786/230217128-1ccce237-bf6c-42f5-b026-a86720541584.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/3458786/230217128-1ccce237-bf6c-42f5-b026-a86720541584.png">
+    <img src="https://user-images.githubusercontent.com/3458786/230217128-1ccce237-bf6c-42f5-b026-a86720541584.png">
 </picture>
 <br>
 <br>
