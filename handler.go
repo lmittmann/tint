@@ -19,16 +19,18 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-var (
-	defaultTimeFormat = time.StampMilli
-
-	levelStrings = map[slog.Level]string{
-		slog.LevelDebug: "DBG",
-		slog.LevelInfo:  "\033[92mINF\033[0m",
-		slog.LevelWarn:  "\033[93mWRN\033[0m",
-		slog.LevelError: "\033[91mERR\033[0m",
-	}
+// ANSI modes
+const (
+	ansiReset          = "\033[0m"
+	ansiFaint          = "\033[2m"
+	ansiResetFaint     = "\033[22m"
+	ansiBrightRed      = "\033[91m"
+	ansiBrightGreen    = "\033[92m"
+	ansiBrightYellow   = "\033[93m"
+	ansiBrightRedFaint = "\033[91;2m"
 )
+
+var defaultTimeFormat = time.StampMilli
 
 // Options for a slog.Handler that writes tinted logs. A zero Options consists
 // entirely of default values.
@@ -91,12 +93,15 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	buf := newBuffer()
 	defer buf.Free()
 
-	// write time, level, and message
-	buf.WriteString("\033[2m")
-	*buf = r.Time.AppendFormat(*buf, h.timeFormat)
-	buf.WriteString("\033[0m ")
-	buf.WriteString(levelStrings[r.Level])
+	// write time
+	h.appendTime(buf, r.Time)
 	buf.WriteByte(' ')
+
+	// write level
+	h.appendLevel(buf, r.Level)
+	buf.WriteByte(' ')
+
+	// write message
 	buf.WriteString(r.Message)
 
 	// write handler attributes
@@ -143,6 +148,43 @@ func (h *handler) WithGroup(name string) slog.Handler {
 	return h2
 }
 
+func (h *handler) appendTime(buf *buffer, t time.Time) {
+	buf.WriteString(ansiFaint)
+	*buf = t.AppendFormat(*buf, h.timeFormat)
+	buf.WriteString(ansiReset)
+}
+
+func (h *handler) appendLevel(buf *buffer, level slog.Level) {
+	delta := func(buf *buffer, val slog.Level) {
+		if val == 0 {
+			return
+		}
+		buf.WriteByte('+')
+		*buf = strconv.AppendInt(*buf, int64(val), 10)
+	}
+
+	switch {
+	case level < slog.LevelInfo:
+		buf.WriteString("DBG")
+		delta(buf, level-slog.LevelDebug)
+	case level < slog.LevelWarn:
+		buf.WriteString(ansiBrightGreen)
+		buf.WriteString("INF")
+		delta(buf, level-slog.LevelInfo)
+		buf.WriteString(ansiReset)
+	case level < slog.LevelError:
+		buf.WriteString(ansiBrightYellow)
+		buf.WriteString("WRN")
+		delta(buf, level-slog.LevelWarn)
+		buf.WriteString(ansiReset)
+	default:
+		buf.WriteString(ansiBrightRed)
+		buf.WriteString("ERR")
+		delta(buf, level-slog.LevelError)
+		buf.WriteString(ansiReset)
+	}
+}
+
 func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groups string) {
 	if kind := attr.Value.Kind(); kind == slog.KindGroup {
 		groups = groups + attr.Key + "."
@@ -165,9 +207,9 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groups string) {
 }
 
 func (h *handler) appendKey(buf *buffer, key string, groups string) {
-	buf.WriteString("\033[2m")
+	buf.WriteString(ansiFaint)
 	appendString(buf, h.groups+groups+key)
-	buf.WriteString("=\033[0m")
+	buf.WriteString("=" + ansiReset)
 }
 
 func appendValue(buf *buffer, v slog.Value) {
@@ -200,11 +242,11 @@ func appendValue(buf *buffer, v slog.Value) {
 }
 
 func (h *handler) appendTintError(buf *buffer, err error, groups string) {
-	buf.WriteString("\033[91;2m")
+	buf.WriteString(ansiBrightRedFaint)
 	appendString(buf, h.groups+groups+"err")
-	buf.WriteString("=\033[22m")
+	buf.WriteString("=" + ansiResetFaint)
 	appendString(buf, err.Error())
-	buf.WriteString("\033[0m")
+	buf.WriteString(ansiReset)
 }
 
 func appendString(buf *buffer, s string) {
