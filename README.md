@@ -42,3 +42,37 @@ ANSI color support in the terminal on Windows can be enabled by using e.g. [`go-
 ```go
 logger := slog.New(tint.NewHandler(colorable.NewColorableStderr()))
 ```
+
+### Custom Levels
+
+You may need to customize level rendering or define how to render a custom level.
+tint accepts a `LevelStrings` map defining per level the raw prefix of each message.
+Default level strings comes from [zerolog.ConsoleWriter].
+
+```go
+// Configure with journalctl-like colors.
+slog.SetDefault(slog.New(tint.Options{
+	LevelStrings:      map[slog.Level]string{
+		slog.LevelDebug: "\033[0;2mDEBUG",
+		slog.LevelInfo:  "\033[0;1mINFO ",
+		slog.LevelWarn:  "\033[0;1;38;5;185mWARN ",
+		slog.LevelError: "\033[0;1;31mERROR",
+    },
+}.NewHandler(os.Stderr)))
+```
+
+If you don't want the message to inherit level color, put `\033[0m` at the end of the level string.
+
+```go
+// Configure with journalctl-like colors.
+slog.SetDefault(slog.New(tint.Options{
+	LevelStrings:      map[slog.Level]string{
+		slog.LevelDebug: "\033[0;2mDEBUG\033[0m",
+		slog.LevelInfo:  "\033[0;1mINFO \033[0m",
+		slog.LevelWarn:  "\033[0;1;38;5;185mWARN \033[0m",
+		slog.LevelError: "\033[0;1;31mERROR\033[0m",
+    },
+}.NewHandler(os.Stderr)))
+```
+
+If you don't define a format for a standard or custom level in `LevelStrings`, tint handler will format it like zerolog.ConsoleWriter.

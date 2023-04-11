@@ -30,7 +30,9 @@ const (
 	ansiBrightRedFaint = "\033[91;2m"
 )
 
-var defaultTimeFormat = time.StampMilli
+var (
+	defaultTimeFormat = time.StampMilli
+)
 
 // Options for a slog.Handler that writes tinted logs. A zero Options consists
 // entirely of default values.
@@ -40,15 +42,18 @@ type Options struct {
 
 	// Time format (Default: time.StampMilli)
 	TimeFormat string
+
+	LevelStrings map[slog.Level]string
 }
 
 // NewHandler creates a [slog.Handler] that writes tinted logs to w with the
 // given options.
 func (opts Options) NewHandler(w io.Writer) slog.Handler {
 	h := &handler{
-		w:          w,
-		level:      opts.Level,
-		timeFormat: opts.TimeFormat,
+		w:            w,
+		level:        opts.Level,
+		levelStrings: opts.LevelStrings,
+		timeFormat:   opts.TimeFormat,
 	}
 	if h.timeFormat == "" {
 		h.timeFormat = defaultTimeFormat
@@ -70,8 +75,9 @@ type handler struct {
 	mu sync.Mutex
 	w  io.Writer // Output writer
 
-	level      slog.Level // Minimum level to log (Default: slog.InfoLevel)
-	timeFormat string     // Time format (Default: time.StampMilli)
+	level        slog.Level            // Minimum level to log (Default: slog.InfoLevel)
+	levelStrings map[slog.Level]string // Per level precomputed message prefix.
+	timeFormat   string                // Time format (Default: time.StampMilli)
 }
 
 func (h *handler) clone() *handler {
@@ -155,6 +161,13 @@ func (h *handler) appendTime(buf *buffer, t time.Time) {
 }
 
 func (h *handler) appendLevel(buf *buffer, level slog.Level) {
+	// Use predefined snippet if available. Fallback to computed value.
+	levelString, ok := h.levelStrings[level]
+	if ok {
+		buf.WriteString(levelString)
+		return
+	}
+
 	delta := func(buf *buffer, val slog.Level) {
 		if val == 0 {
 			return
