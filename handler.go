@@ -266,7 +266,7 @@ func needsQuoting(s string) bool {
 	return false
 }
 
-type tintError error
+type tintError struct{ error }
 
 // Err returns a tinted slog.Attr.
-func Err(err error) slog.Attr { return slog.Any("", tintError(err)) }
+func Err(err error) slog.Attr { return slog.Any("", tintError{err}) }
