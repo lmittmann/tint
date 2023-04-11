@@ -109,6 +109,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 
 	// write message
 	buf.WriteString(r.Message)
+	buf.WriteString(ansiReset)
 
 	// write handler attributes
 	if len(h.attrs) > 0 {
@@ -217,6 +218,7 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groups string) {
 	buf.WriteByte(' ')
 	h.appendKey(buf, attr.Key, groups)
 	appendValue(buf, attr.Value)
+	buf.WriteString(ansiReset)
 }
 
 func (h *handler) appendKey(buf *buffer, key string, groups string) {
