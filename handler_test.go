@@ -179,12 +179,12 @@ func TestHandler(t *testing.T) {
 		},
 		{
 			Opts: tint.Options{
-				ReplaceAttr: replace(slog.IntValue(42), slog.LevelKey),
+				ReplaceAttr: replace(slog.StringValue("INFO"), slog.LevelKey),
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 11 00:00:00.000 42 test key=val`,
+			Want: `Nov 11 00:00:00.000 INFO test key=val`,
 		},
 		{
 			Opts: tint.Options{
@@ -194,6 +194,27 @@ func TestHandler(t *testing.T) {
 				l.Info("test", "key", "val")
 			},
 			Want: `Nov 11 00:00:00.000 INF 42 key=val`,
+		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: replace(slog.IntValue(42), "key"),
+			},
+			F: func(l *slog.Logger) {
+				l.With("key", "val").Info("test", "key2", "val2")
+			},
+			Want: `Nov 11 00:00:00.000 INF test key=42 key2=val2`,
+		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					a.Key = ""
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: ``,
 		},
 
 		{ // https://github.com/lmittmann/tint/issues/8

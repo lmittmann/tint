@@ -136,44 +136,45 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	buf := newBuffer()
 	defer buf.Free()
 
+	rep := h.replaceAttr
+
 	// write time
-	a := slog.Time(slog.TimeKey, r.Time)
-	if h.replaceAttr != nil {
-		a = h.replaceAttr(nil, a)
-	}
-	if a.Key != "" {
-		if a.Value.Kind() == slog.KindString {
-			buf.WriteString(a.Value.String())
-		} else if a.Value.Kind() == slog.KindTime {
-			h.appendTime(buf, a.Value.Time())
-		} else {
-			appendValue(buf, a.Value)
+	if !r.Time.IsZero() {
+		val := r.Time.Round(0) // strip monotonic to match Attr behavior
+		if rep == nil {
+			h.appendTime(buf, r.Time)
+			buf.WriteByte(' ')
+		} else if a := rep(h.groupsSlice, slog.Time(slog.TimeKey, val)); a.Key != "" {
+			if a.Value.Kind() == slog.KindTime {
+				h.appendTime(buf, r.Time)
+			} else {
+				appendValue(buf, a.Value, false)
+			}
+			buf.WriteByte(' ')
 		}
-		buf.WriteByte(' ')
 	}
 
 	// write level
-	a = slog.Int(slog.LevelKey, int(r.Level))
-	if h.replaceAttr != nil {
-		a = h.replaceAttr(nil, a)
-	}
-	if a.Key != "" {
-		if a.Value.Kind() == slog.KindString {
-			buf.WriteString(a.Value.String())
-		} else if a.Value.Kind() == slog.KindInt64 {
-			h.appendLevel(buf, r.Level)
+	if rep == nil {
+		h.appendLevel(buf, r.Level)
+		buf.WriteByte(' ')
+	} else if a := rep(h.groupsSlice, slog.Int(slog.LevelKey, int(r.Level))); a.Key != "" {
+		if a.Value.Kind() == slog.KindInt64 {
+			h.appendLevel(buf, slog.Level(a.Value.Int64()))
 		} else {
-			appendValue(buf, a.Value)
+			appendValue(buf, a.Value, false)
 		}
 		buf.WriteByte(' ')
 	}
 
 	// write message
-	a = slog.String(slog.MessageKey, r.Message)
-	if h.replaceAttr != nil {
-		a = h.replaceAttr(nil, a)
+	if rep == nil {
+		buf.WriteString(r.Message)
+		buf.WriteByte(' ')
+	} else if a := rep(h.groupsSlice, slog.String(slog.MessageKey, r.Message)); a.Key != "" {
+		appendValue(buf, a.Value, false)
+		buf.WriteByte(' ')
 	}
-	buf.WriteString(a.Value.String())
 
 	// write handler attributes
 	if len(h.attrs) > 0 {
@@ -182,12 +183,16 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 
 	// write attributes
 	r.Attrs(func(attr slog.Attr) {
-		if h.replaceAttr != nil {
-			attr = h.replaceAttr(h.groupsSlice, attr)
+		if rep != nil {
+			attr = rep(h.groupsSlice, attr)
 		}
 		h.appendAttr(buf, attr, "")
 	})
-	buf.WriteByte('\n')
+
+	if len(*buf) == 0 {
+		return nil
+	}
+	(*buf)[len(*buf)-1] = '\n' // replace last space with newline
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -268,37 +273,38 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groups string) {
 		return
 	}
 
-	if kind := attr.Value.Kind(); kind == slog.KindGroup {
+	switch attr.Value.Kind() {
+	case slog.KindGroup:
 		groups = groups + attr.Key + "."
 		for _, groupAttr := range attr.Value.Group() {
 			h.appendAttr(buf, groupAttr, groups)
 		}
-		return
-	} else if kind == slog.KindAny {
+	case slog.KindAny:
 		if err, ok := attr.Value.Any().(tintError); ok {
 			// append tintError
-			buf.WriteByte(' ')
 			h.appendTintError(buf, err, groups)
-			return
+			buf.WriteByte(' ')
+			break
 		}
+		fallthrough
+	default:
+		h.appendKey(buf, attr.Key, groups)
+		appendValue(buf, attr.Value, true)
+		buf.WriteByte(' ')
 	}
-
-	buf.WriteByte(' ')
-	h.appendKey(buf, attr.Key, groups)
-	appendValue(buf, attr.Value)
 }
 
 func (h *handler) appendKey(buf *buffer, key string, groups string) {
 	buf.WriteStringIf(!h.noColor, ansiFaint)
-	appendString(buf, h.groups+groups+key)
+	appendString(buf, h.groups+groups+key, true)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func appendValue(buf *buffer, v slog.Value) {
+func appendValue(buf *buffer, v slog.Value, quote bool) {
 	switch v.Kind() {
 	case slog.KindString:
-		appendString(buf, v.String())
+		appendString(buf, v.String(), quote)
 	case slog.KindInt64:
 		*buf = strconv.AppendInt(*buf, v.Int64(), 10)
 	case slog.KindUint64:
@@ -308,33 +314,33 @@ func appendValue(buf *buffer, v slog.Value) {
 	case slog.KindBool:
 		*buf = strconv.AppendBool(*buf, v.Bool())
 	case slog.KindDuration:
-		appendString(buf, v.Duration().String())
+		appendString(buf, v.Duration().String(), quote)
 	case slog.KindTime:
-		appendString(buf, v.Time().String())
+		appendString(buf, v.Time().String(), quote)
 	case slog.KindAny:
 		if tm, ok := v.Any().(encoding.TextMarshaler); ok {
 			data, err := tm.MarshalText()
 			if err != nil {
 				break
 			}
-			appendString(buf, string(data))
+			appendString(buf, string(data), quote)
 			break
 		}
-		appendString(buf, fmt.Sprint(v.Any()))
+		appendString(buf, fmt.Sprint(v.Any()), quote)
 	}
 }
 
 func (h *handler) appendTintError(buf *buffer, err error, groups string) {
 	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
-	appendString(buf, h.groups+groups+keyErr)
+	appendString(buf, h.groups+groups+keyErr, true)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
-	appendString(buf, err.Error())
+	appendString(buf, err.Error(), true)
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func appendString(buf *buffer, s string) {
-	if needsQuoting(s) {
+func appendString(buf *buffer, s string, quote bool) {
+	if quote && needsQuoting(s) {
 		*buf = strconv.AppendQuote(*buf, s)
 	} else {
 		buf.WriteString(s)
