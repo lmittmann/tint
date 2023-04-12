@@ -40,15 +40,46 @@ type Options struct {
 
 	// Time format (Default: time.StampMilli)
 	TimeFormat string
+
+	// ReplaceAttr is called to rewrite each non-group attribute before it is logged.
+	// The attribute's value has been resolved (see [Value.Resolve]).
+	// If ReplaceAttr returns an Attr with Key == "", the attribute is discarded.
+	//
+	// The built-in attributes with keys "time", "level", "source", and "msg"
+	// are passed to this function.
+	//
+	// The first argument is a list of currently open groups that contain the
+	// Attr. It must not be retained or modified. ReplaceAttr is never called
+	// for Group attributes, only their contents. For example, the attribute
+	// list
+	//
+	//     Int("a", 1), Group("g", Int("b", 2)), Int("c", 3)
+	//
+	// results in consecutive calls to ReplaceAttr with the following arguments:
+	//
+	//     nil, Int("a", 1)
+	//     []string{"g"}, Int("b", 2)
+	//     nil, Int("c", 3)
+	//
+	// ReplaceAttr can be used to change the default keys of the built-in
+	// attributes, convert types (for example, to replace a `time.Time` with the
+	// integer seconds since the Unix epoch), sanitize personal information, or
+	// remove attributes from the output.
+	//
+	// ReplaceAttr can be used to customize formatting of level. If level
+	// attribute is replaced by a string value, the string is written as-is to
+	// the output.
+	ReplaceAttr func(groups []string, attr slog.Attr) slog.Attr
 }
 
 // NewHandler creates a [slog.Handler] that writes tinted logs to w with the
 // given options.
 func (opts Options) NewHandler(w io.Writer) slog.Handler {
 	h := &handler{
-		w:          w,
-		level:      opts.Level,
-		timeFormat: opts.TimeFormat,
+		w:           w,
+		level:       opts.Level,
+		timeFormat:  opts.TimeFormat,
+		replaceAttr: opts.ReplaceAttr,
 	}
 	if h.timeFormat == "" {
 		h.timeFormat = defaultTimeFormat
@@ -72,15 +103,18 @@ type handler struct {
 
 	level      slog.Level // Minimum level to log (Default: slog.InfoLevel)
 	timeFormat string     // Time format (Default: time.StampMilli)
+
+	replaceAttr func(groups []string, attr slog.Attr) slog.Attr
 }
 
 func (h *handler) clone() *handler {
 	return &handler{
-		attrs:      h.attrs,
-		groups:     h.groups,
-		w:          h.w,
-		level:      h.level,
-		timeFormat: h.timeFormat,
+		attrs:       h.attrs,
+		groups:      h.groups,
+		w:           h.w,
+		level:       h.level,
+		replaceAttr: h.replaceAttr,
+		timeFormat:  h.timeFormat,
 	}
 }
 
@@ -94,15 +128,43 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	defer buf.Free()
 
 	// write time
-	h.appendTime(buf, r.Time)
-	buf.WriteByte(' ')
+	a := slog.Time(slog.TimeKey, r.Time)
+	if h.replaceAttr != nil {
+		a = h.replaceAttr(nil, a)
+	}
+	if a.Key != "" {
+		if a.Value.Kind() == slog.KindString {
+			buf.WriteString(a.Value.String())
+		} else if a.Value.Kind() == slog.KindTime {
+			h.appendTime(buf, a.Value.Time())
+		} else {
+			appendValue(buf, a.Value)
+		}
+		buf.WriteByte(' ')
+	}
 
 	// write level
-	h.appendLevel(buf, r.Level)
-	buf.WriteByte(' ')
+	a = slog.Int(slog.LevelKey, int(r.Level))
+	if h.replaceAttr != nil {
+		a = h.replaceAttr(nil, a)
+	}
+	if a.Key != "" {
+		if a.Value.Kind() == slog.KindString {
+			buf.WriteString(a.Value.String())
+		} else if a.Value.Kind() == slog.KindInt64 {
+			h.appendLevel(buf, r.Level)
+		} else {
+			appendValue(buf, a.Value)
+		}
+		buf.WriteByte(' ')
+	}
 
 	// write message
-	buf.WriteString(r.Message)
+	a = slog.String(slog.MessageKey, r.Message)
+	if h.replaceAttr != nil {
+		a = h.replaceAttr(nil, a)
+	}
+	buf.WriteString(a.Value.String())
 
 	// write handler attributes
 	if len(h.attrs) > 0 {
@@ -111,6 +173,9 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 
 	// write attributes
 	r.Attrs(func(attr slog.Attr) {
+		if h.replaceAttr != nil {
+			attr = h.replaceAttr([]string{h.groups}, attr)
+		}
 		h.appendAttr(buf, attr, "")
 	})
 	buf.WriteByte('\n')
@@ -133,6 +198,9 @@ func (h *handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 
 	// write attributes to buffer
 	for _, attr := range attrs {
+		if h.replaceAttr != nil {
+			attr = h.replaceAttr([]string{h.groups}, attr)
+		}
 		h.appendAttr(buf, attr, "")
 	}
 	h2.attrs = h.attrs + string(*buf)
@@ -186,6 +254,10 @@ func (h *handler) appendLevel(buf *buffer, level slog.Level) {
 }
 
 func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groups string) {
+	if attr.Key == "" {
+		return
+	}
+
 	if kind := attr.Value.Kind(); kind == slog.KindGroup {
 		groups = groups + attr.Key + "."
 		for _, groupAttr := range attr.Value.Group() {
@@ -269,4 +341,4 @@ func needsQuoting(s string) bool {
 type tintError struct{ error }
 
 // Err returns a tinted slog.Attr.
-func Err(err error) slog.Attr { return slog.Any("", tintError{err}) }
+func Err(err error) slog.Attr { return slog.Any("err", tintError{err}) }

@@ -42,3 +42,38 @@ ANSI color support in the terminal on Windows can be enabled by using e.g. [`go-
 ```go
 logger := slog.New(tint.NewHandler(colorable.NewColorableStderr()))
 ```
+
+### Customize
+
+tint implements `ReplaceAttr` pattern.
+`ReplaceAttr` can remove or format an attribute.
+Non string attributes are rendered as-is.
+Time and Level attributes are formatted using zerolog.ConsoleWriter style.
+
+Example:
+
+``` go
+var levelStrings = map[slog.Level]string{
+    slog.LevelDebug: "\033[2mDEBUG",
+    slog.LevelInfo:  "\033[1mINFO ",
+    slog.LevelWarn:  "\033[1;38;5;185mWARN ",
+    slog.LevelError: "\033[1;31mERROR",
+}
+
+slog.SetDefault(slog.New(tint.Options{
+    TimeFormat: "15:04:05",
+    Level:      slog.LevelDebug,
+    ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+        if a.Key == slog.LevelKey {
+            a.Value = slog.StringValue(levelStrings[slog.Level(a.Value.Int64())])
+        }
+        return a
+    },
+}.NewHandler(os.Stderr)))
+
+slog.Info("Starting server", "addr", ":8080", "env", "production")
+slog.Debug("Connected to DB", "db", "myapp", "host", "localhost:5432")
+slog.Warn("Slow request", "method", "GET", "path", "/users", "duration", 497*time.Millisecond)
+slog.Error("DB connection lost", tint.Err(errors.New("connection reset")), "db", "myapp")
+```
+
