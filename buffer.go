@@ -37,3 +37,10 @@ func (b *buffer) WriteString(str string) (int, error) {
 	*b = append(*b, str...)
 	return len(str), nil
 }
+
+func (b *buffer) WriteStringIf(ok bool, str string) (int, error) {
+	if !ok {
+		return 0, nil
+	}
+	return b.WriteString(str)
+}
