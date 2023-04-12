@@ -101,8 +101,9 @@ func NewHandler(w io.Writer) slog.Handler {
 
 // handler implements a [slog.Handler].
 type handler struct {
-	attrs  string
-	groups string
+	attrs       string
+	groups      string
+	groupsSlice []string
 
 	mu sync.Mutex
 	w  io.Writer // Output writer
@@ -110,13 +111,14 @@ type handler struct {
 	level       slog.Level // Minimum level to log (Default: slog.LevelInfo)
 	timeFormat  string     // Time format (Default: time.StampMilli)
 	noColor     bool       // Disable color (Default: false)
-	replaceAttr func(groups []string, attr slog.Attr) slog.Attr
+	replaceAttr func([]string, slog.Attr) slog.Attr
 }
 
 func (h *handler) clone() *handler {
 	return &handler{
 		attrs:       h.attrs,
 		groups:      h.groups,
+		groupsSlice: h.groupsSlice,
 		w:           h.w,
 		level:       h.level,
 		timeFormat:  h.timeFormat,
@@ -181,7 +183,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	// write attributes
 	r.Attrs(func(attr slog.Attr) {
 		if h.replaceAttr != nil {
-			attr = h.replaceAttr([]string{h.groups}, attr)
+			attr = h.replaceAttr(h.groupsSlice, attr)
 		}
 		h.appendAttr(buf, attr, "")
 	})
@@ -206,7 +208,7 @@ func (h *handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	// write attributes to buffer
 	for _, attr := range attrs {
 		if h.replaceAttr != nil {
-			attr = h.replaceAttr([]string{h.groups}, attr)
+			attr = h.replaceAttr(h.groupsSlice, attr)
 		}
 		h.appendAttr(buf, attr, "")
 	}
@@ -220,6 +222,7 @@ func (h *handler) WithGroup(name string) slog.Handler {
 	}
 	h2 := h.clone()
 	h2.groups = h2.groups + name + "."
+	h2.groupsSlice = append(h2.groupsSlice, name)
 	return h2
 }
 
