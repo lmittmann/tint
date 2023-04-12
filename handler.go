@@ -127,6 +127,8 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	buf := newBuffer()
 	defer buf.Free()
 
+	buf.WriteString(ansiReset)
+
 	// write time
 	a := slog.Time(slog.TimeKey, r.Time)
 	if h.replaceAttr != nil {
@@ -178,7 +180,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		}
 		h.appendAttr(buf, attr, "")
 	})
-	buf.WriteByte('\n')
+	buf.WriteString(ansiReset + "\n")
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
