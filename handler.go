@@ -30,25 +30,31 @@ const (
 	ansiBrightRedFaint = "\033[91;2m"
 )
 
+const keyErr = "err"
+
 var defaultTimeFormat = time.StampMilli
 
 // Options for a slog.Handler that writes tinted logs. A zero Options consists
 // entirely of default values.
 type Options struct {
-	// Minimum level to log (Default: slog.InfoLevel)
+	// Minimum level to log (Default: slog.LevelInfo)
 	Level slog.Level
 
 	// Time format (Default: time.StampMilli)
 	TimeFormat string
+
+	// Disable color (Default: false)
+	NoColor bool
 }
 
-// NewHandler creates a [slog.Handler] that writes tinted logs to w with the
-// given options.
+// NewHandler creates a [slog.Handler] that writes tinted logs to Writer w with
+// the given options.
 func (opts Options) NewHandler(w io.Writer) slog.Handler {
 	h := &handler{
 		w:          w,
 		level:      opts.Level,
 		timeFormat: opts.TimeFormat,
+		noColor:    opts.NoColor,
 	}
 	if h.timeFormat == "" {
 		h.timeFormat = defaultTimeFormat
@@ -56,13 +62,13 @@ func (opts Options) NewHandler(w io.Writer) slog.Handler {
 	return h
 }
 
-// NewHandler creates a [slog.Handler] that writes tinted logs to w, using the default
-// options.
+// NewHandler creates a [slog.Handler] that writes tinted logs to Writer w,
+// using the default options.
 func NewHandler(w io.Writer) slog.Handler {
-	return (Options{}).NewHandler(w)
+	return Options{}.NewHandler(w)
 }
 
-// handler implements a [slog.handler].
+// handler implements a [slog.Handler].
 type handler struct {
 	attrs  string
 	groups string
@@ -70,8 +76,9 @@ type handler struct {
 	mu sync.Mutex
 	w  io.Writer // Output writer
 
-	level      slog.Level // Minimum level to log (Default: slog.InfoLevel)
+	level      slog.Level // Minimum level to log (Default: slog.LevelInfo)
 	timeFormat string     // Time format (Default: time.StampMilli)
+	noColor    bool       // Disable color (Default: false)
 }
 
 func (h *handler) clone() *handler {
@@ -81,6 +88,7 @@ func (h *handler) clone() *handler {
 		w:          h.w,
 		level:      h.level,
 		timeFormat: h.timeFormat,
+		noColor:    h.noColor,
 	}
 }
 
@@ -149,9 +157,9 @@ func (h *handler) WithGroup(name string) slog.Handler {
 }
 
 func (h *handler) appendTime(buf *buffer, t time.Time) {
-	buf.WriteString(ansiFaint)
+	buf.WriteStringIf(!h.noColor, ansiFaint)
 	*buf = t.AppendFormat(*buf, h.timeFormat)
-	buf.WriteString(ansiReset)
+	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
 func (h *handler) appendLevel(buf *buffer, level slog.Level) {
@@ -168,20 +176,20 @@ func (h *handler) appendLevel(buf *buffer, level slog.Level) {
 		buf.WriteString("DBG")
 		delta(buf, level-slog.LevelDebug)
 	case level < slog.LevelWarn:
-		buf.WriteString(ansiBrightGreen)
+		buf.WriteStringIf(!h.noColor, ansiBrightGreen)
 		buf.WriteString("INF")
 		delta(buf, level-slog.LevelInfo)
-		buf.WriteString(ansiReset)
+		buf.WriteStringIf(!h.noColor, ansiReset)
 	case level < slog.LevelError:
-		buf.WriteString(ansiBrightYellow)
+		buf.WriteStringIf(!h.noColor, ansiBrightYellow)
 		buf.WriteString("WRN")
 		delta(buf, level-slog.LevelWarn)
-		buf.WriteString(ansiReset)
+		buf.WriteStringIf(!h.noColor, ansiReset)
 	default:
-		buf.WriteString(ansiBrightRed)
+		buf.WriteStringIf(!h.noColor, ansiBrightRed)
 		buf.WriteString("ERR")
 		delta(buf, level-slog.LevelError)
-		buf.WriteString(ansiReset)
+		buf.WriteStringIf(!h.noColor, ansiReset)
 	}
 }
 
@@ -207,9 +215,10 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groups string) {
 }
 
 func (h *handler) appendKey(buf *buffer, key string, groups string) {
-	buf.WriteString(ansiFaint)
+	buf.WriteStringIf(!h.noColor, ansiFaint)
 	appendString(buf, h.groups+groups+key)
-	buf.WriteString("=" + ansiReset)
+	buf.WriteByte('=')
+	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
 func appendValue(buf *buffer, v slog.Value) {
@@ -242,11 +251,12 @@ func appendValue(buf *buffer, v slog.Value) {
 }
 
 func (h *handler) appendTintError(buf *buffer, err error, groups string) {
-	buf.WriteString(ansiBrightRedFaint)
-	appendString(buf, h.groups+groups+"err")
-	buf.WriteString("=" + ansiResetFaint)
+	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
+	appendString(buf, h.groups+groups+keyErr)
+	buf.WriteByte('=')
+	buf.WriteStringIf(!h.noColor, ansiResetFaint)
 	appendString(buf, err.Error())
-	buf.WriteString(ansiReset)
+	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
 func appendString(buf *buffer, s string) {

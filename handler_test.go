@@ -1,16 +1,21 @@
 package tint_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"os"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/lmittmann/tint"
 	"golang.org/x/exp/slog"
 )
+
+var faketime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 
 func Example() {
 	slog.SetDefault(slog.New(tint.Options{
@@ -23,6 +28,106 @@ func Example() {
 	slog.Warn("Slow request", "method", "GET", "path", "/users", "duration", 497*time.Millisecond)
 	slog.Error("DB connection lost", tint.Err(errors.New("connection reset")), "db", "myapp")
 	// Output:
+}
+
+// Run test with "faketime" tag:
+//
+//	go test -tags=faketime
+func TestHandler(t *testing.T) {
+	if !faketime.Equal(time.Now()) {
+		t.Skip(`skipping test; run with "-tags=faketime"`)
+	}
+
+	tests := []struct {
+		Opts tint.Options
+		F    func(l *slog.Logger)
+		Want string
+	}{
+		{
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: `Nov 11 00:00:00.000 INF test key=val`,
+		},
+		{
+			F: func(l *slog.Logger) {
+				l.Error("test", tint.Err(errors.New("fail")))
+			},
+			Want: `Nov 11 00:00:00.000 ERR test err=fail`,
+		},
+		{
+			F: func(l *slog.Logger) {
+				l.Info("test", slog.Group("group", slog.String("key", "val"), tint.Err(errors.New("fail"))))
+			},
+			Want: `Nov 11 00:00:00.000 INF test group.key=val group.err=fail`,
+		},
+		{
+			F: func(l *slog.Logger) {
+				l.WithGroup("group").Info("test", "key", "val")
+			},
+			Want: `Nov 11 00:00:00.000 INF test group.key=val`,
+		},
+		{
+			F: func(l *slog.Logger) {
+				l.With("key", "val").Info("test", "key2", "val2")
+			},
+			Want: `Nov 11 00:00:00.000 INF test key=val key2=val2`,
+		},
+		{
+			F: func(l *slog.Logger) {
+				l.Info("test", "k e y", "v a l")
+			},
+			Want: `Nov 11 00:00:00.000 INF test "k e y"="v a l"`,
+		},
+		{
+			F: func(l *slog.Logger) {
+				l.WithGroup("g r o u p").Info("test", "key", "val")
+			},
+			Want: `Nov 11 00:00:00.000 INF test "g r o u p.key"=val`,
+		},
+		{
+			F: func(l *slog.Logger) {
+				l.Info("test", "slice", []string{"a", "b", "c"}, "map", map[string]int{"a": 1, "b": 2, "c": 3})
+			},
+			Want: `Nov 11 00:00:00.000 INF test slice="[a b c]" map="map[a:1 b:2 c:3]"`,
+		},
+		{
+			Opts: tint.Options{
+				TimeFormat: time.Kitchen,
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: `12:00AM INF test key=val`,
+		},
+
+		{ // https://github.com/lmittmann/tint/issues/8
+			F: func(l *slog.Logger) {
+				l.Log(nil, slog.LevelInfo+1, "test")
+			},
+			Want: `Nov 11 00:00:00.000 INF+1 test`,
+		},
+		{ // https://github.com/lmittmann/tint/issues/12
+			F: func(l *slog.Logger) {
+				l.Error("test", slog.Any("error", errors.New("fail")))
+			},
+			Want: `Nov 11 00:00:00.000 ERR test error=fail`,
+		},
+	}
+
+	for i, test := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			var buf bytes.Buffer
+			test.Opts.NoColor = true
+			l := slog.New(test.Opts.NewHandler(&buf))
+			test.F(l)
+
+			got := strings.TrimRight(buf.String(), "\n")
+			if test.Want != got {
+				t.Fatalf("(-want +got)\n- %s\n+ %s", test.Want, got)
+			}
+		})
+	}
 }
 
 // See https://github.com/golang/exp/blob/master/slog/benchmarks/benchmarks_test.go#L25
