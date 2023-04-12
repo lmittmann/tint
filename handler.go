@@ -268,14 +268,14 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groups string) {
 		return
 	} else if kind == slog.KindAny {
 		if err, ok := attr.Value.Any().(tintError); ok {
+			buf.WriteString(" " + ansiReset)
 			// append tintError
-			buf.WriteByte(' ')
 			h.appendTintError(buf, err, groups)
 			return
 		}
 	}
 
-	buf.WriteByte(' ')
+	buf.WriteString(" " + ansiReset)
 	h.appendKey(buf, attr.Key, groups)
 	appendValue(buf, attr.Value)
 }
