@@ -19,7 +19,7 @@ go get github.com/lmittmann/tint
 
 > **Note**
 >
-> [`slog`](https://pkg.go.dev/golang.org/x/exp/slog) is an experimental structured logging package, that will be included in the **standard library** in **Go 1.21**. See [#56345](https://github.com/golang/go/issues/56345) for tracking the progress.
+> [`slog`](https://pkg.go.dev/golang.org/x/exp/slog) is an experimental structured logging package, that will be added to the **standard library** in **Go 1.21**. See [#56345](https://github.com/golang/go/issues/56345) for tracking the progress.
 
 
 ## Usage
@@ -45,11 +45,11 @@ for details.
 // create a new logger that doesn't write the time
 logger := slog.New(tint.Options{
 	ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-        if a.Key == slog.TimeKey && len(groups) == 0 {
-            a.Key = ""
-        }
-        return a
-    },
+		if a.Key == slog.TimeKey && len(groups) == 0 {
+			a.Key = ""
+		}
+		return a
+	},
 }.NewHandler(os.Stderr))
 ```
 
