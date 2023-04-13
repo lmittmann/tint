@@ -47,33 +47,7 @@ type Options struct {
 	NoColor bool
 
 	// ReplaceAttr is called to rewrite each non-group attribute before it is logged.
-	// The attribute's value has been resolved (see [Value.Resolve]).
-	// If ReplaceAttr returns an Attr with Key == "", the attribute is discarded.
-	//
-	// The built-in attributes with keys "time", "level", "source", and "msg"
-	// are passed to this function.
-	//
-	// The first argument is a list of currently open groups that contain the
-	// Attr. It must not be retained or modified. ReplaceAttr is never called
-	// for Group attributes, only their contents. For example, the attribute
-	// list
-	//
-	//     Int("a", 1), Group("g", Int("b", 2)), Int("c", 3)
-	//
-	// results in consecutive calls to ReplaceAttr with the following arguments:
-	//
-	//     nil, Int("a", 1)
-	//     []string{"g"}, Int("b", 2)
-	//     nil, Int("c", 3)
-	//
-	// ReplaceAttr can be used to change the default keys of the built-in
-	// attributes, convert types (for example, to replace a `time.Time` with the
-	// integer seconds since the Unix epoch), sanitize personal information, or
-	// remove attributes from the output.
-	//
-	// ReplaceAttr can be used to customize formatting of level. If level
-	// attribute is replaced by a string value, the string is written as-is to
-	// the output.
+	// See https://pkg.go.dev/golang.org/x/exp/slog#HandlerOptions for details.
 	ReplaceAttr func(groups []string, attr slog.Attr) slog.Attr
 }
 
