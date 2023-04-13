@@ -42,7 +42,7 @@ each non-group attribute before it is logged. See [`slog.HandlerOptions`](https:
 for details.
 
 ```go
-// create a new logger that does't write the time
+// create a new logger that doesn't write the time
 logger := slog.New(tint.Options{
 	ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
         if a.Key == slog.TimeKey && len(groups) == 0 {
