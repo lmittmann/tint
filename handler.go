@@ -11,6 +11,8 @@ import (
 	"encoding"
 	"fmt"
 	"io"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -37,6 +39,9 @@ var defaultTimeFormat = time.StampMilli
 // Options for a slog.Handler that writes tinted logs. A zero Options consists
 // entirely of default values.
 type Options struct {
+	// Enable source code location (Default: false)
+	AddSource bool
+
 	// Minimum level to log (Default: slog.LevelInfo)
 	Level slog.Level
 
@@ -56,6 +61,7 @@ type Options struct {
 func (opts Options) NewHandler(w io.Writer) slog.Handler {
 	h := &handler{
 		w:           w,
+		addSource:   opts.AddSource,
 		level:       opts.Level,
 		timeFormat:  opts.TimeFormat,
 		noColor:     opts.NoColor,
@@ -82,6 +88,7 @@ type handler struct {
 	mu sync.Mutex
 	w  io.Writer // Output writer
 
+	addSource   bool       // Enable source code location (Default: false)
 	level       slog.Level // Minimum level to log (Default: slog.LevelInfo)
 	timeFormat  string     // Time format (Default: time.StampMilli)
 	noColor     bool       // Disable color (Default: false)
@@ -94,6 +101,7 @@ func (h *handler) clone() *handler {
 		groups:      h.groups,
 		groupsSlice: h.groupsSlice,
 		w:           h.w,
+		addSource:   h.addSource,
 		level:       h.level,
 		timeFormat:  h.timeFormat,
 		noColor:     h.noColor,
@@ -139,6 +147,21 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 			appendValue(buf, a.Value, false)
 		}
 		buf.WriteByte(' ')
+	}
+
+	// write source
+	if h.addSource {
+		fs := runtime.CallersFrames([]uintptr{r.PC})
+		f, _ := fs.Next()
+		if f.File != "" {
+			if rep == nil {
+				h.appendSource(buf, f)
+				buf.WriteByte(' ')
+			} else if a := rep(h.groupsSlice, slog.Any(slog.SourceKey, f)); a.Key != "" {
+				appendValue(buf, a.Value, false)
+				buf.WriteByte(' ')
+			}
+		}
 	}
 
 	// write message
@@ -240,6 +263,18 @@ func (h *handler) appendLevel(buf *buffer, level slog.Level) {
 		delta(buf, level-slog.LevelError)
 		buf.WriteStringIf(!h.noColor, ansiReset)
 	}
+}
+
+func (h *handler) appendSource(buf *buffer, f runtime.Frame) {
+	dir, file := filepath.Split(f.File)
+
+	buf.WriteStringIf(!h.noColor, ansiFaint)
+	buf.WriteByte('<')
+	buf.WriteString(filepath.Join(filepath.Base(dir), file))
+	buf.WriteByte(':')
+	buf.WriteString(strconv.Itoa(f.Line))
+	buf.WriteByte('>')
+	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
 func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groups string) {
