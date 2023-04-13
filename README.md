@@ -35,6 +35,24 @@ slog.SetDefault(slog.New(tint.Options{
 }.NewHandler(os.Stderr)))
 ```
 
+### Customize
+
+`ReplaceAttr` can be used to alter or drop attributes. If set, it is called on
+each non-group attribute before it is logged. See [`slog.HandlerOptions`](https://pkg.go.dev/golang.org/x/exp/slog#HandlerOptions)
+for details.
+
+```go
+// create a new logger that does't write the time
+logger := slog.New(tint.Options{
+	ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+        if a.Key == slog.TimeKey && len(groups) == 0 {
+            a.Key = ""
+        }
+        return a
+    },
+}.NewHandler(os.Stderr))
+```
+
 ### Windows
 
 ANSI color support in the terminal on Windows can be enabled by using e.g. [`go-colorable`](https://github.com/mattn/go-colorable).

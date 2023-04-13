@@ -100,6 +100,122 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `12:00AM INF test key=val`,
 		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: drop(slog.TimeKey),
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: `INF test key=val`,
+		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: drop(slog.LevelKey),
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: `Nov 11 00:00:00.000 test key=val`,
+		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: drop(slog.MessageKey),
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: `Nov 11 00:00:00.000 INF key=val`,
+		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: drop(slog.TimeKey, slog.LevelKey, slog.MessageKey),
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: `key=val`,
+		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: drop("key"),
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: `Nov 11 00:00:00.000 INF test`,
+		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: drop("key"),
+			},
+			F: func(l *slog.Logger) {
+				l.WithGroup("group").Info("test", "key", "val", "key2", "val2")
+			},
+			Want: `Nov 11 00:00:00.000 INF test group.key=val group.key2=val2`,
+		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == "key" && len(groups) == 1 && groups[0] == "group" {
+						a.Key = ""
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.WithGroup("group").Info("test", "key", "val", "key2", "val2")
+			},
+			Want: `Nov 11 00:00:00.000 INF test group.key2=val2`,
+		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: replace(slog.IntValue(42), slog.TimeKey),
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: `42 INF test key=val`,
+		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: replace(slog.StringValue("INFO"), slog.LevelKey),
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: `Nov 11 00:00:00.000 INFO test key=val`,
+		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: replace(slog.IntValue(42), slog.MessageKey),
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: `Nov 11 00:00:00.000 INF 42 key=val`,
+		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: replace(slog.IntValue(42), "key"),
+			},
+			F: func(l *slog.Logger) {
+				l.With("key", "val").Info("test", "key2", "val2")
+			},
+			Want: `Nov 11 00:00:00.000 INF test key=42 key2=val2`,
+		},
+		{
+			Opts: tint.Options{
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					a.Key = ""
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: ``,
+		},
 
 		{ // https://github.com/lmittmann/tint/issues/8
 			F: func(l *slog.Logger) {
@@ -127,6 +243,37 @@ func TestHandler(t *testing.T) {
 				t.Fatalf("(-want +got)\n- %s\n+ %s", test.Want, got)
 			}
 		})
+	}
+}
+
+// drop returns a ReplaceAttr that drops the given keys.
+func drop(keys ...string) func([]string, slog.Attr) slog.Attr {
+	return func(groups []string, a slog.Attr) slog.Attr {
+		if len(groups) > 0 {
+			return a
+		}
+
+		for _, key := range keys {
+			if a.Key == key {
+				a.Key = ""
+			}
+		}
+		return a
+	}
+}
+
+func replace(new slog.Value, keys ...string) func([]string, slog.Attr) slog.Attr {
+	return func(groups []string, a slog.Attr) slog.Attr {
+		if len(groups) > 0 {
+			return a
+		}
+
+		for _, key := range keys {
+			if a.Key == key {
+				a.Value = new
+			}
+		}
+		return a
 	}
 }
 
