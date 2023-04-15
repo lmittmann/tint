@@ -13,6 +13,8 @@
 
 Package `tint` provides a [`slog.Handler`](https://pkg.go.dev/golang.org/x/exp/slog#Handler) that writes tinted logs. The output format is inspired by the `zerolog.ConsoleWriter`.
 
+The output format can be customized using [`Options`](https://pkg.go.dev/github.com/lmittmann/tint#Options) which is a drop-in replacement for [`slog.HandlerOptions`](https://pkg.go.dev/golang.org/x/exp/slog#HandlerOptions).
+
 ```
 go get github.com/lmittmann/tint
 ```

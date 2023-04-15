@@ -2,6 +2,9 @@
 Package tint provides a [slog.Handler] that writes tinted logs. The output
 format is inspired by the [zerolog.ConsoleWriter].
 
+The output format can be customized using [Options], which is a drop-in
+replacement for [slog.HandlerOptions].
+
 [zerolog.ConsoleWriter]: https://pkg.go.dev/github.com/rs/zerolog#ConsoleWriter
 */
 package tint
@@ -34,26 +37,31 @@ const (
 
 const keyErr = "err"
 
-var defaultTimeFormat = time.StampMilli
+var (
+	defaultTimeFormat = time.StampMilli
+	defaultLevel      = slog.LevelInfo
+)
 
 // Options for a slog.Handler that writes tinted logs. A zero Options consists
 // entirely of default values.
+//
+// Options can be used as a drop-in replacement for [slog.HandlerOptions].
 type Options struct {
 	// Enable source code location (Default: false)
 	AddSource bool
 
 	// Minimum level to log (Default: slog.LevelInfo)
-	Level slog.Level
+	Level slog.Leveler
+
+	// ReplaceAttr is called to rewrite each non-group attribute before it is logged.
+	// See https://pkg.go.dev/golang.org/x/exp/slog#HandlerOptions for details.
+	ReplaceAttr func(groups []string, attr slog.Attr) slog.Attr
 
 	// Time format (Default: time.StampMilli)
 	TimeFormat string
 
 	// Disable color (Default: false)
 	NoColor bool
-
-	// ReplaceAttr is called to rewrite each non-group attribute before it is logged.
-	// See https://pkg.go.dev/golang.org/x/exp/slog#HandlerOptions for details.
-	ReplaceAttr func(groups []string, attr slog.Attr) slog.Attr
 }
 
 // NewHandler creates a [slog.Handler] that writes tinted logs to Writer w with
@@ -62,13 +70,16 @@ func (opts Options) NewHandler(w io.Writer) slog.Handler {
 	h := &handler{
 		w:           w,
 		addSource:   opts.AddSource,
-		level:       opts.Level,
-		timeFormat:  opts.TimeFormat,
-		noColor:     opts.NoColor,
+		level:       defaultLevel,
 		replaceAttr: opts.ReplaceAttr,
+		timeFormat:  defaultTimeFormat,
+		noColor:     opts.NoColor,
 	}
-	if h.timeFormat == "" {
-		h.timeFormat = defaultTimeFormat
+	if opts.Level != nil {
+		h.level = opts.Level.Level()
+	}
+	if opts.TimeFormat != "" {
+		h.timeFormat = opts.TimeFormat
 	}
 	return h
 }
@@ -86,13 +97,13 @@ type handler struct {
 	groupsSlice []string
 
 	mu sync.Mutex
-	w  io.Writer // Output writer
+	w  io.Writer
 
-	addSource   bool       // Enable source code location (Default: false)
-	level       slog.Level // Minimum level to log (Default: slog.LevelInfo)
-	timeFormat  string     // Time format (Default: time.StampMilli)
-	noColor     bool       // Disable color (Default: false)
+	addSource   bool
+	level       slog.Level
 	replaceAttr func([]string, slog.Attr) slog.Attr
+	timeFormat  string
+	noColor     bool
 }
 
 func (h *handler) clone() *handler {
@@ -103,9 +114,9 @@ func (h *handler) clone() *handler {
 		w:           h.w,
 		addSource:   h.addSource,
 		level:       h.level,
+		replaceAttr: h.replaceAttr,
 		timeFormat:  h.timeFormat,
 		noColor:     h.noColor,
-		replaceAttr: h.replaceAttr,
 	}
 }
 
@@ -269,11 +280,9 @@ func (h *handler) appendSource(buf *buffer, f runtime.Frame) {
 	dir, file := filepath.Split(f.File)
 
 	buf.WriteStringIf(!h.noColor, ansiFaint)
-	buf.WriteByte('<')
 	buf.WriteString(filepath.Join(filepath.Base(dir), file))
 	buf.WriteByte(':')
 	buf.WriteString(strconv.Itoa(f.Line))
-	buf.WriteByte('>')
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
