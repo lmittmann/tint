@@ -242,7 +242,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Error("test", tint.Err(nil))
 			},
-			Want: `Nov 11 00:00:00.000 ERR test err=<nil>`,
+			Want: `Nov 10 23:00:00.000 ERR test err=<nil>`,
 		},
 	}
 
