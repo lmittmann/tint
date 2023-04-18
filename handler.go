@@ -312,7 +312,7 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groups string) {
 	}
 }
 
-func (h *handler) appendKey(buf *buffer, key string, groups string) {
+func (h *handler) appendKey(buf *buffer, key, groups string) {
 	buf.WriteStringIf(!h.noColor, ansiFaint)
 	appendString(buf, h.groups+groups+key, true)
 	buf.WriteByte('=')
@@ -377,4 +377,9 @@ func needsQuoting(s string) bool {
 type tintError struct{ error }
 
 // Err returns a tinted slog.Attr.
-func Err(err error) slog.Attr { return slog.Any(keyErr, tintError{err}) }
+func Err(err error) slog.Attr {
+	if err != nil {
+		err = tintError{err}
+	}
+	return slog.Any(keyErr, err)
+}
