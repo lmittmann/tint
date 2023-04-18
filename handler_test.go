@@ -32,7 +32,7 @@ func Example() {
 
 // Run test with "faketime" tag:
 //
-//	go test -tags=faketime
+//	TZ="" go test -tags=faketime
 func TestHandler(t *testing.T) {
 	if !faketime.Equal(time.Now()) {
 		t.Skip(`skipping test; run with "-tags=faketime"`)
@@ -47,49 +47,49 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 11 00:00:00.000 INF test key=val`,
+			Want: `Nov 10 23:00:00.000 INF test key=val`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.Error("test", tint.Err(errors.New("fail")))
 			},
-			Want: `Nov 11 00:00:00.000 ERR test err=fail`,
+			Want: `Nov 10 23:00:00.000 ERR test err=fail`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.Info("test", slog.Group("group", slog.String("key", "val"), tint.Err(errors.New("fail"))))
 			},
-			Want: `Nov 11 00:00:00.000 INF test group.key=val group.err=fail`,
+			Want: `Nov 10 23:00:00.000 INF test group.key=val group.err=fail`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.WithGroup("group").Info("test", "key", "val")
 			},
-			Want: `Nov 11 00:00:00.000 INF test group.key=val`,
+			Want: `Nov 10 23:00:00.000 INF test group.key=val`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.With("key", "val").Info("test", "key2", "val2")
 			},
-			Want: `Nov 11 00:00:00.000 INF test key=val key2=val2`,
+			Want: `Nov 10 23:00:00.000 INF test key=val key2=val2`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.Info("test", "k e y", "v a l")
 			},
-			Want: `Nov 11 00:00:00.000 INF test "k e y"="v a l"`,
+			Want: `Nov 10 23:00:00.000 INF test "k e y"="v a l"`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.WithGroup("g r o u p").Info("test", "key", "val")
 			},
-			Want: `Nov 11 00:00:00.000 INF test "g r o u p.key"=val`,
+			Want: `Nov 10 23:00:00.000 INF test "g r o u p.key"=val`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.Info("test", "slice", []string{"a", "b", "c"}, "map", map[string]int{"a": 1, "b": 2, "c": 3})
 			},
-			Want: `Nov 11 00:00:00.000 INF test slice="[a b c]" map="map[a:1 b:2 c:3]"`,
+			Want: `Nov 10 23:00:00.000 INF test slice="[a b c]" map="map[a:1 b:2 c:3]"`,
 		},
 		{
 			Opts: tint.Options{
@@ -98,7 +98,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 11 00:00:00.000 INF tint/handler_test.go:99 test key=val`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:99 test key=val`,
 		},
 		{
 			Opts: tint.Options{
@@ -107,7 +107,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `12:00AM INF test key=val`,
+			Want: `11:00PM INF test key=val`,
 		},
 		{
 			Opts: tint.Options{
@@ -125,7 +125,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 11 00:00:00.000 test key=val`,
+			Want: `Nov 10 23:00:00.000 test key=val`,
 		},
 		{
 			Opts: tint.Options{
@@ -134,7 +134,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 11 00:00:00.000 INF key=val`,
+			Want: `Nov 10 23:00:00.000 INF key=val`,
 		},
 		{
 			Opts: tint.Options{
@@ -152,7 +152,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 11 00:00:00.000 INF test`,
+			Want: `Nov 10 23:00:00.000 INF test`,
 		},
 		{
 			Opts: tint.Options{
@@ -161,7 +161,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.WithGroup("group").Info("test", "key", "val", "key2", "val2")
 			},
-			Want: `Nov 11 00:00:00.000 INF test group.key=val group.key2=val2`,
+			Want: `Nov 10 23:00:00.000 INF test group.key=val group.key2=val2`,
 		},
 		{
 			Opts: tint.Options{
@@ -175,7 +175,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.WithGroup("group").Info("test", "key", "val", "key2", "val2")
 			},
-			Want: `Nov 11 00:00:00.000 INF test group.key2=val2`,
+			Want: `Nov 10 23:00:00.000 INF test group.key2=val2`,
 		},
 		{
 			Opts: tint.Options{
@@ -193,7 +193,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 11 00:00:00.000 INFO test key=val`,
+			Want: `Nov 10 23:00:00.000 INFO test key=val`,
 		},
 		{
 			Opts: tint.Options{
@@ -202,7 +202,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 11 00:00:00.000 INF 42 key=val`,
+			Want: `Nov 10 23:00:00.000 INF 42 key=val`,
 		},
 		{
 			Opts: tint.Options{
@@ -211,7 +211,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.With("key", "val").Info("test", "key2", "val2")
 			},
-			Want: `Nov 11 00:00:00.000 INF test key=42 key2=val2`,
+			Want: `Nov 10 23:00:00.000 INF test key=42 key2=val2`,
 		},
 		{
 			Opts: tint.Options{
@@ -230,13 +230,13 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Log(nil, slog.LevelInfo+1, "test")
 			},
-			Want: `Nov 11 00:00:00.000 INF+1 test`,
+			Want: `Nov 10 23:00:00.000 INF+1 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/12
 			F: func(l *slog.Logger) {
 				l.Error("test", slog.Any("error", errors.New("fail")))
 			},
-			Want: `Nov 11 00:00:00.000 ERR test error=fail`,
+			Want: `Nov 10 23:00:00.000 ERR test error=fail`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/15
 			F: func(l *slog.Logger) {

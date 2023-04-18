@@ -1,0 +1,32 @@
+name: Go
+
+on:
+  - push
+
+jobs:
+  fmt_vet:
+    name: Fmt & Vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+      - name: go fmt
+        run: |
+          gofmt -s -d . > fmt.out
+          cat fmt.out
+          test -z $(cat fmt.out)
+      - name: go vet
+        run: go vet ./...
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+      - name: go test
+        run: TZ="" go test ./... -tags=faketime
