@@ -184,6 +184,10 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		buf.WriteByte(' ')
 	}
 
+	// Ensure color is reset before attrs in case message inherits colors from
+	// level.
+	buf.WriteStringIf(!h.noColor, ansiReset)
+
 	// write handler attributes
 	if len(h.attrs) > 0 {
 		buf.WriteString(h.attrs)
