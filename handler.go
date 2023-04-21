@@ -190,11 +190,12 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	}
 
 	// write attributes
-	r.Attrs(func(attr slog.Attr) {
+	r.Attrs(func(attr slog.Attr) bool {
 		if rep != nil {
 			attr = rep(h.groupsSlice, attr)
 		}
 		h.appendAttr(buf, attr, "")
+		return true
 	})
 
 	if len(*buf) == 0 {
