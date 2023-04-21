@@ -48,7 +48,7 @@ for details.
 logger := slog.New(tint.Options{
 	ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 		if a.Key == slog.TimeKey && len(groups) == 0 {
-			a.Key = ""
+			return slog.Attr{}
 		}
 		return a
 	},
