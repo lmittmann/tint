@@ -167,7 +167,7 @@ func TestHandler(t *testing.T) {
 			Opts: tint.Options{
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 					if a.Key == "key" && len(groups) == 1 && groups[0] == "group" {
-						a.Key = ""
+						return slog.Attr{}
 					}
 					return a
 				},
@@ -216,14 +216,31 @@ func TestHandler(t *testing.T) {
 		{
 			Opts: tint.Options{
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-					a.Key = ""
-					return a
+					return slog.Attr{}
 				},
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
 			Want: ``,
+		},
+		{
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "")
+			},
+			Want: `Nov 10 23:00:00.000 INF test key=""`,
+		},
+		{
+			F: func(l *slog.Logger) {
+				l.Info("test", "", "val")
+			},
+			Want: `Nov 10 23:00:00.000 INF test ""=val`,
+		},
+		{
+			F: func(l *slog.Logger) {
+				l.Info("test", "", "")
+			},
+			Want: `Nov 10 23:00:00.000 INF test ""=""`,
 		},
 
 		{ // https://github.com/lmittmann/tint/issues/8
@@ -270,7 +287,7 @@ func drop(keys ...string) func([]string, slog.Attr) slog.Attr {
 
 		for _, key := range keys {
 			if a.Key == key {
-				a.Key = ""
+				a = slog.Attr{}
 			}
 		}
 		return a

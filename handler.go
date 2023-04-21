@@ -288,9 +288,10 @@ func (h *handler) appendSource(buf *buffer, f runtime.Frame) {
 }
 
 func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groups string) {
-	if attr.Key == "" {
+	if attr.Equal(slog.Attr{}) {
 		return
 	}
+	attr.Value = attr.Value.Resolve()
 
 	switch attr.Value.Kind() {
 	case slog.KindGroup:
@@ -367,6 +368,9 @@ func appendString(buf *buffer, s string, quote bool) {
 }
 
 func needsQuoting(s string) bool {
+	if len(s) == 0 {
+		return true
+	}
 	for _, r := range s {
 		if unicode.IsSpace(r) || r == '"' || r == '=' || !unicode.IsPrint(r) {
 			return true
