@@ -18,10 +18,10 @@ import (
 var faketime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 
 func Example() {
-	slog.SetDefault(slog.New(tint.Options{
+	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{
 		Level:      slog.LevelDebug,
 		TimeFormat: time.Kitchen,
-	}.NewHandler(os.Stderr)))
+	})))
 
 	slog.Info("Starting server", "addr", ":8080", "env", "production")
 	slog.Debug("Connected to DB", "db", "myapp", "host", "localhost:5432")
@@ -39,7 +39,7 @@ func TestHandler(t *testing.T) {
 	}
 
 	tests := []struct {
-		Opts tint.Options
+		Opts *tint.Options
 		F    func(l *slog.Logger)
 		Want string
 	}{
@@ -92,7 +92,7 @@ func TestHandler(t *testing.T) {
 			Want: `Nov 10 23:00:00.000 INF test slice="[a b c]" map="map[a:1 b:2 c:3]"`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				AddSource: true,
 			},
 			F: func(l *slog.Logger) {
@@ -101,7 +101,7 @@ func TestHandler(t *testing.T) {
 			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:99 test key=val`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				TimeFormat: time.Kitchen,
 			},
 			F: func(l *slog.Logger) {
@@ -110,7 +110,7 @@ func TestHandler(t *testing.T) {
 			Want: `11:00PM INF test key=val`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				ReplaceAttr: drop(slog.TimeKey),
 			},
 			F: func(l *slog.Logger) {
@@ -119,7 +119,7 @@ func TestHandler(t *testing.T) {
 			Want: `INF test key=val`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				ReplaceAttr: drop(slog.LevelKey),
 			},
 			F: func(l *slog.Logger) {
@@ -128,7 +128,7 @@ func TestHandler(t *testing.T) {
 			Want: `Nov 10 23:00:00.000 test key=val`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				ReplaceAttr: drop(slog.MessageKey),
 			},
 			F: func(l *slog.Logger) {
@@ -137,7 +137,7 @@ func TestHandler(t *testing.T) {
 			Want: `Nov 10 23:00:00.000 INF key=val`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				ReplaceAttr: drop(slog.TimeKey, slog.LevelKey, slog.MessageKey),
 			},
 			F: func(l *slog.Logger) {
@@ -146,7 +146,7 @@ func TestHandler(t *testing.T) {
 			Want: `key=val`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				ReplaceAttr: drop("key"),
 			},
 			F: func(l *slog.Logger) {
@@ -155,7 +155,7 @@ func TestHandler(t *testing.T) {
 			Want: `Nov 10 23:00:00.000 INF test`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				ReplaceAttr: drop("key"),
 			},
 			F: func(l *slog.Logger) {
@@ -164,7 +164,7 @@ func TestHandler(t *testing.T) {
 			Want: `Nov 10 23:00:00.000 INF test group.key=val group.key2=val2`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 					if a.Key == "key" && len(groups) == 1 && groups[0] == "group" {
 						return slog.Attr{}
@@ -178,7 +178,7 @@ func TestHandler(t *testing.T) {
 			Want: `Nov 10 23:00:00.000 INF test group.key2=val2`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				ReplaceAttr: replace(slog.IntValue(42), slog.TimeKey),
 			},
 			F: func(l *slog.Logger) {
@@ -187,7 +187,7 @@ func TestHandler(t *testing.T) {
 			Want: `42 INF test key=val`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				ReplaceAttr: replace(slog.StringValue("INFO"), slog.LevelKey),
 			},
 			F: func(l *slog.Logger) {
@@ -196,7 +196,7 @@ func TestHandler(t *testing.T) {
 			Want: `Nov 10 23:00:00.000 INFO test key=val`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				ReplaceAttr: replace(slog.IntValue(42), slog.MessageKey),
 			},
 			F: func(l *slog.Logger) {
@@ -205,7 +205,7 @@ func TestHandler(t *testing.T) {
 			Want: `Nov 10 23:00:00.000 INF 42 key=val`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				ReplaceAttr: replace(slog.IntValue(42), "key"),
 			},
 			F: func(l *slog.Logger) {
@@ -214,7 +214,7 @@ func TestHandler(t *testing.T) {
 			Want: `Nov 10 23:00:00.000 INF test key=42 key2=val2`,
 		},
 		{
-			Opts: tint.Options{
+			Opts: &tint.Options{
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 					return slog.Attr{}
 				},
@@ -266,8 +266,11 @@ func TestHandler(t *testing.T) {
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			var buf bytes.Buffer
+			if test.Opts == nil {
+				test.Opts = &tint.Options{}
+			}
 			test.Opts.NoColor = true
-			l := slog.New(test.Opts.NewHandler(&buf))
+			l := slog.New(tint.NewHandler(&buf, test.Opts))
 			test.F(l)
 
 			got := strings.TrimRight(buf.String(), "\n")
@@ -319,7 +322,7 @@ func BenchmarkLogAttrs(b *testing.B) {
 		Name string
 		H    slog.Handler
 	}{
-		{"tint", tint.NewHandler(io.Discard)},
+		{"tint", tint.NewHandler(io.Discard, nil)},
 		{"text", slog.NewTextHandler(io.Discard, nil)},
 		{"json", slog.NewJSONHandler(io.Discard, nil)},
 		{"discard", new(discarder)},

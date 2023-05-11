@@ -38,8 +38,8 @@ const (
 const keyErr = "err"
 
 var (
-	defaultTimeFormat = time.StampMilli
 	defaultLevel      = slog.LevelInfo
+	defaultTimeFormat = time.StampMilli
 )
 
 // Options for a slog.Handler that writes tinted logs. A zero Options consists
@@ -64,30 +64,28 @@ type Options struct {
 	NoColor bool
 }
 
-// NewHandler creates a [slog.Handler] that writes tinted logs to Writer w with
-// the given options.
-func (opts Options) NewHandler(w io.Writer) slog.Handler {
+// NewHandler creates a [slog.Handler] that writes tinted logs to Writer w,
+// using the default options. If opts is nil, the default options are used.
+func NewHandler(w io.Writer, opts *Options) slog.Handler {
 	h := &handler{
-		w:           w,
-		addSource:   opts.AddSource,
-		level:       defaultLevel,
-		replaceAttr: opts.ReplaceAttr,
-		timeFormat:  defaultTimeFormat,
-		noColor:     opts.NoColor,
+		w:          w,
+		level:      defaultLevel,
+		timeFormat: defaultTimeFormat,
 	}
+	if opts == nil {
+		return h
+	}
+
+	h.addSource = opts.AddSource
 	if opts.Level != nil {
 		h.level = opts.Level.Level()
 	}
+	h.replaceAttr = opts.ReplaceAttr
 	if opts.TimeFormat != "" {
 		h.timeFormat = opts.TimeFormat
 	}
+	h.noColor = opts.NoColor
 	return h
-}
-
-// NewHandler creates a [slog.Handler] that writes tinted logs to Writer w,
-// using the default options.
-func NewHandler(w io.Writer) slog.Handler {
-	return Options{}.NewHandler(w)
 }
 
 // handler implements a [slog.Handler].
@@ -165,10 +163,16 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		fs := runtime.CallersFrames([]uintptr{r.PC})
 		f, _ := fs.Next()
 		if f.File != "" {
+			src := &slog.Source{
+				Function: f.Function,
+				File:     f.File,
+				Line:     f.Line,
+			}
+
 			if rep == nil {
-				h.appendSource(buf, f)
+				h.appendSource(buf, src)
 				buf.WriteByte(' ')
-			} else if a := rep(h.groupsSlice, slog.Any(slog.SourceKey, f)); a.Key != "" {
+			} else if a := rep(h.groupsSlice, slog.Any(slog.SourceKey, src)); a.Key != "" {
 				appendValue(buf, a.Value, false)
 				buf.WriteByte(' ')
 			}
@@ -277,13 +281,13 @@ func (h *handler) appendLevel(buf *buffer, level slog.Level) {
 	}
 }
 
-func (h *handler) appendSource(buf *buffer, f runtime.Frame) {
-	dir, file := filepath.Split(f.File)
+func (h *handler) appendSource(buf *buffer, src *slog.Source) {
+	dir, file := filepath.Split(src.File)
 
 	buf.WriteStringIf(!h.noColor, ansiFaint)
 	buf.WriteString(filepath.Join(filepath.Base(dir), file))
 	buf.WriteByte(':')
-	buf.WriteString(strconv.Itoa(f.Line))
+	buf.WriteString(strconv.Itoa(src.Line))
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 

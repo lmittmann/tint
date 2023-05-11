@@ -7,7 +7,7 @@ type buffer []byte
 var bufPool = sync.Pool{
 	New: func() any {
 		b := make(buffer, 0, 1024)
-		return &b
+		return (*buffer)(&b)
 	},
 }
 
