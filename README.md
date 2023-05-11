@@ -28,13 +28,13 @@ go get github.com/lmittmann/tint
 
 ```go
 // create a new logger
-logger := slog.New(tint.NewHandler(os.Stderr))
+logger := slog.New(tint.NewHandler(os.Stderr, nil))
 
 // set global logger with custom options
-slog.SetDefault(slog.New(tint.Options{
+slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{
 	Level:      slog.LevelDebug,
 	TimeFormat: time.Kitchen,
-}.NewHandler(os.Stderr)))
+})))
 ```
 
 ### Customize
@@ -45,14 +45,14 @@ for details.
 
 ```go
 // create a new logger that doesn't write the time
-logger := slog.New(tint.Options{
+logger := slog.New(tint.NewHandler(os.Stderr, &tint.Options{
 	ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 		if a.Key == slog.TimeKey && len(groups) == 0 {
 			return slog.Attr{}
 		}
 		return a
 	},
-}.NewHandler(os.Stderr))
+}))
 ```
 
 ### Windows
@@ -60,5 +60,5 @@ logger := slog.New(tint.Options{
 ANSI color support in the terminal on Windows can be enabled by using e.g. [`go-colorable`](https://github.com/mattn/go-colorable).
 
 ```go
-logger := slog.New(tint.NewHandler(colorable.NewColorableStderr()))
+logger := slog.New(tint.NewHandler(colorable.NewColorableStderr(), nil))
 ```
