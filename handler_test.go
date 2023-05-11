@@ -320,8 +320,8 @@ func BenchmarkLogAttrs(b *testing.B) {
 		H    slog.Handler
 	}{
 		{"tint", tint.NewHandler(io.Discard)},
-		{"text", slog.NewTextHandler(io.Discard)},
-		{"json", slog.NewJSONHandler(io.Discard)},
+		{"text", slog.NewTextHandler(io.Discard, nil)},
+		{"json", slog.NewJSONHandler(io.Discard, nil)},
 		{"discard", new(discarder)},
 	}
 
