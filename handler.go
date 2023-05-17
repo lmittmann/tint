@@ -35,7 +35,7 @@ const (
 	ansiBrightRedFaint = "\033[91;2m"
 )
 
-const keyErr = "err"
+const errKey = "err"
 
 var (
 	defaultLevel      = slog.LevelInfo
@@ -356,7 +356,7 @@ func appendValue(buf *buffer, v slog.Value, quote bool) {
 
 func (h *handler) appendTintError(buf *buffer, err error, groups string) {
 	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
-	appendString(buf, h.groups+groups+keyErr, true)
+	appendString(buf, h.groups+groups+errKey, true)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
 	appendString(buf, err.Error(), true)
@@ -390,5 +390,5 @@ func Err(err error) slog.Attr {
 	if err != nil {
 		err = tintError{err}
 	}
-	return slog.Any(keyErr, err)
+	return slog.Any(errKey, err)
 }
