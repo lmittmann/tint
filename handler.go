@@ -78,7 +78,7 @@ func NewHandler(w io.Writer, opts *Options) slog.Handler {
 
 	h.addSource = opts.AddSource
 	if opts.Level != nil {
-		h.level = opts.Level.Level()
+		h.level = opts.Level
 	}
 	h.replaceAttr = opts.ReplaceAttr
 	if opts.TimeFormat != "" {
@@ -98,7 +98,7 @@ type handler struct {
 	w  io.Writer
 
 	addSource   bool
-	level       slog.Level
+	level       slog.Leveler
 	replaceAttr func([]string, slog.Attr) slog.Attr
 	timeFormat  string
 	noColor     bool
@@ -119,7 +119,7 @@ func (h *handler) clone() *handler {
 }
 
 func (h *handler) Enabled(_ context.Context, level slog.Level) bool {
-	return level >= h.level
+	return level >= h.level.Level()
 }
 
 func (h *handler) Handle(_ context.Context, r slog.Record) error {
