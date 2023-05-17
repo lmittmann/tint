@@ -198,7 +198,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		if rep != nil {
 			attr = rep(h.groups, attr)
 		}
-		h.appendAttr(buf, attr, "")
+		h.appendAttr(buf, attr, h.groupPrefix)
 		return true
 	})
 
@@ -228,7 +228,7 @@ func (h *handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 		if h.replaceAttr != nil {
 			attr = h.replaceAttr(h.groups, attr)
 		}
-		h.appendAttr(buf, attr, "")
+		h.appendAttr(buf, attr, h.groupPrefix)
 	}
 	h2.attrsPrefix = h.attrsPrefix + string(*buf)
 	return h2
@@ -239,7 +239,7 @@ func (h *handler) WithGroup(name string) slog.Handler {
 		return h
 	}
 	h2 := h.clone()
-	h2.groupPrefix = h2.groupPrefix + name + "."
+	h2.groupPrefix += name + "."
 	h2.groups = append(h2.groups, name)
 	return h2
 }
@@ -320,7 +320,7 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string) {
 
 func (h *handler) appendKey(buf *buffer, key, groups string) {
 	buf.WriteStringIf(!h.noColor, ansiFaint)
-	appendString(buf, h.groupPrefix+groups+key, true)
+	appendString(buf, groups+key, true)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
