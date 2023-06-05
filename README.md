@@ -11,7 +11,7 @@
 <br>
 <br>
 
-Package `tint` provides a [`slog.Handler`](https://pkg.go.dev/golang.org/x/exp/slog#Handler) that writes tinted logs. The output format is inspired by the `zerolog.ConsoleWriter`.
+Package `tint` provides a [`slog.Handler`](https://pkg.go.dev/golang.org/x/exp/slog#Handler) that writes tinted (colorized) logs. The output format is inspired by the `zerolog.ConsoleWriter`.
 
 The output format can be customized using [`Options`](https://pkg.go.dev/github.com/lmittmann/tint#Options) which is a drop-in replacement for [`slog.HandlerOptions`](https://pkg.go.dev/golang.org/x/exp/slog#HandlerOptions).
 
@@ -31,10 +31,12 @@ go get github.com/lmittmann/tint
 logger := slog.New(tint.NewHandler(os.Stderr, nil))
 
 // set global logger with custom options
-slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{
-	Level:      slog.LevelDebug,
-	TimeFormat: time.Kitchen,
-})))
+slog.SetDefault(slog.New(
+    tint.NewHandler(os.Stderr, &tint.Options{
+        Level:      slog.LevelDebug,
+        TimeFormat: time.Kitchen,
+    }),
+))
 ```
 
 ### Customize
@@ -46,19 +48,38 @@ for details.
 ```go
 // create a new logger that doesn't write the time
 logger := slog.New(tint.NewHandler(os.Stderr, &tint.Options{
-	ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-		if a.Key == slog.TimeKey && len(groups) == 0 {
-			return slog.Attr{}
-		}
-		return a
-	},
+    ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+        if a.Key == slog.TimeKey && len(groups) == 0 {
+            return slog.Attr{}
+        }
+        return a
+    },
 }))
 ```
 
-### Windows
+### Automatically Enable/Disable Colors
 
-ANSI color support in the terminal on Windows can be enabled by using e.g. [`go-colorable`](https://github.com/mattn/go-colorable).
+Colors are enabled by default and can be disabled using the `Options.NoColor`
+attribute. To automatically enable colors based on the terminal capabilities,
+use e.g. the [`go-isatty`](https://github.com/mattn/go-isatty) package.
 
 ```go
-logger := slog.New(tint.NewHandler(colorable.NewColorableStderr(), nil))
+w := os.Stderr
+logger := slog.New(
+    tint.NewHandler(w, &tint.Options{
+        NoColor: !isatty.IsTerminal(w.Fd()),
+    }),
+)
+```
+
+### Windows Support
+
+Color support on Windows can be added by using e.g. the
+[`go-colorable`](https://github.com/mattn/go-colorable) package.
+
+```go
+w := os.Stderr
+logger := slog.New(
+    tint.NewHandler(colorable.NewColorable(w), nil),
+)
 ```

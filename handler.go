@@ -5,7 +5,31 @@ format is inspired by the [zerolog.ConsoleWriter].
 The output format can be customized using [Options], which is a drop-in
 replacement for [slog.HandlerOptions].
 
+# Automatically Enable Colors
+
+Colors are enabled by default and can be disabled using the Options.NoColor
+attribute. To automatically enable colors based on the terminal capabilities,
+use e.g. the [go-isatty] package.
+
+	w := os.Stderr
+	logger := slog.New(
+		tint.NewHandler(w, &tint.Options{
+			NoColor: !isatty.IsTerminal(w.Fd()),
+		}),
+	)
+
+# Windows Support
+
+Color support on Windows can be added by using e.g. the [go-colorable] package.
+
+	w := os.Stderr
+	logger := slog.New(
+		tint.NewHandler(colorable.NewColorable(w), nil),
+	)
+
 [zerolog.ConsoleWriter]: https://pkg.go.dev/github.com/rs/zerolog#ConsoleWriter
+[go-isatty]: https://pkg.go.dev/github.com/mattn/go-isatty
+[go-colorable]: https://pkg.go.dev/github.com/mattn/go-colorable
 */
 package tint
 
