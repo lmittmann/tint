@@ -38,14 +38,13 @@ import (
 	"encoding"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"sync"
 	"time"
 	"unicode"
-
-	"golang.org/x/exp/slog"
 )
 
 // ANSI modes
@@ -78,7 +77,7 @@ type Options struct {
 	Level slog.Leveler
 
 	// ReplaceAttr is called to rewrite each non-group attribute before it is logged.
-	// See https://pkg.go.dev/golang.org/x/exp/slog#HandlerOptions for details.
+	// See https://pkg.go.dev/log/slog#HandlerOptions for details.
 	ReplaceAttr func(groups []string, attr slog.Attr) slog.Attr
 
 	// Time format (Default: time.StampMilli)

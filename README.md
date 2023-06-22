@@ -11,18 +11,13 @@
 <br>
 <br>
 
-Package `tint` provides a [`slog.Handler`](https://pkg.go.dev/golang.org/x/exp/slog#Handler) that writes tinted (colorized) logs. The output format is inspired by the `zerolog.ConsoleWriter`.
+Package `tint` provides a [`slog.Handler`](https://pkg.go.dev/log/slog#Handler) that writes tinted (colorized) logs. The output format is inspired by the `zerolog.ConsoleWriter`.
 
-The output format can be customized using [`Options`](https://pkg.go.dev/github.com/lmittmann/tint#Options) which is a drop-in replacement for [`slog.HandlerOptions`](https://pkg.go.dev/golang.org/x/exp/slog#HandlerOptions).
+The output format can be customized using [`Options`](https://pkg.go.dev/github.com/lmittmann/tint#Options) which is a drop-in replacement for [`slog.HandlerOptions`](https://pkg.go.dev/log/slog#HandlerOptions).
 
 ```
 go get github.com/lmittmann/tint
 ```
-
-> **Note**
->
-> [`slog`](https://pkg.go.dev/golang.org/x/exp/slog) is an experimental structured logging package, that will be added to the **standard library** in **Go 1.21**. See [#56345](https://github.com/golang/go/issues/56345) for tracking the progress.
-
 
 ## Usage
 
@@ -42,7 +37,7 @@ slog.SetDefault(slog.New(
 ### Customize
 
 `ReplaceAttr` can be used to alter or drop attributes. If set, it is called on
-each non-group attribute before it is logged. See [`slog.HandlerOptions`](https://pkg.go.dev/golang.org/x/exp/slog#HandlerOptions)
+each non-group attribute before it is logged. See [`slog.HandlerOptions`](https://pkg.go.dev/log/slog#HandlerOptions)
 for details.
 
 ```go
@@ -57,7 +52,7 @@ logger := slog.New(tint.NewHandler(os.Stderr, &tint.Options{
 }))
 ```
 
-### Automatically Enable/Disable Colors
+### Automatically Enable Colors
 
 Colors are enabled by default and can be disabled using the `Options.NoColor`
 attribute. To automatically enable colors based on the terminal capabilities,
