@@ -1,6 +1,6 @@
 # `tint`: 🌈 **slog.Handler** that writes tinted logs
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/lmittmann/tint.svg)](https://pkg.go.dev/github.com/lmittmann/tint)
+[![Go Reference](https://pkg.go.dev/badge/github.com/lmittmann/tint.svg)](https://pkg.go.dev/github.com/lmittmann/tint#section-documentation)
 [![Go Report Card](https://goreportcard.com/badge/github.com/lmittmann/tint)](https://goreportcard.com/report/github.com/lmittmann/tint)
 
 <picture>
@@ -11,9 +11,11 @@
 <br>
 <br>
 
-Package `tint` provides a [`slog.Handler`](https://pkg.go.dev/log/slog#Handler) that writes tinted (colorized) logs. The output format is inspired by the `zerolog.ConsoleWriter`.
+Package `tint` provides a [`slog.Handler`](https://pkg.go.dev/log/slog#Handler)
+that writes tinted (colorized) logs. The output format is inspired by the `zerolog.ConsoleWriter`.
 
-The output format can be customized using [`Options`](https://pkg.go.dev/github.com/lmittmann/tint#Options) which is a drop-in replacement for [`slog.HandlerOptions`](https://pkg.go.dev/log/slog#HandlerOptions).
+The output format can be customized using [`Options`](https://pkg.go.dev/github.com/lmittmann/tint#Options)
+which is a drop-in replacement for [`slog.HandlerOptions`](https://pkg.go.dev/log/slog#HandlerOptions).
 
 ```
 go get github.com/lmittmann/tint

@@ -1,6 +1,6 @@
 /*
-Package tint provides a [slog.Handler] that writes tinted logs. The output
-format is inspired by the [zerolog.ConsoleWriter].
+Package tint provides a [slog.Handler] that writes tinted (colorized) logs. The
+output format is inspired by the [zerolog.ConsoleWriter].
 
 The output format can be customized using [Options], which is a drop-in
 replacement for [slog.HandlerOptions].
@@ -408,7 +408,10 @@ func needsQuoting(s string) bool {
 
 type tintError struct{ error }
 
-// Err returns a tinted slog.Attr.
+// Err returns a tinted [slog.Attr] that will be written in red color by [tint.Handler].
+// When used with any other [slog.Handler], it behaves like
+//
+//	slog.Any("err", err)
 func Err(err error) slog.Attr {
 	if err != nil {
 		err = tintError{err}
