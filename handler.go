@@ -1,9 +1,28 @@
 /*
-Package tint provides a [slog.Handler] that writes tinted logs. The output
-format is inspired by the [zerolog.ConsoleWriter].
+Package tint implements a zero-dependency [slog.Handler] that writes tinted
+(colorized) logs. The output format is inspired by the [zerolog.ConsoleWriter]
+and [slog.TextHandler].
 
 The output format can be customized using [Options], which is a drop-in
 replacement for [slog.HandlerOptions].
+
+# Customize Attributes
+
+Options.ReplaceAttr can be used to alter or drop attributes. If set, it is
+called on each non-group attribute before it is logged.
+See [slog.HandlerOptions] for details.
+
+	w := os.Stderr
+	logger := slog.New(
+		tint.NewHandler(w, &tint.Options{
+			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+				if a.Key == slog.TimeKey && len(groups) == 0 {
+					return slog.Attr{}
+				}
+				return a
+			},
+		}),
+	)
 
 # Automatically Enable Colors
 
@@ -38,14 +57,13 @@ import (
 	"encoding"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"sync"
 	"time"
 	"unicode"
-
-	"golang.org/x/exp/slog"
 )
 
 // ANSI modes
@@ -78,7 +96,7 @@ type Options struct {
 	Level slog.Leveler
 
 	// ReplaceAttr is called to rewrite each non-group attribute before it is logged.
-	// See https://pkg.go.dev/golang.org/x/exp/slog#HandlerOptions for details.
+	// See https://pkg.go.dev/log/slog#HandlerOptions for details.
 	ReplaceAttr func(groups []string, attr slog.Attr) slog.Attr
 
 	// Time format (Default: time.StampMilli)
@@ -409,7 +427,10 @@ func needsQuoting(s string) bool {
 
 type tintError struct{ error }
 
-// Err returns a tinted slog.Attr.
+// Err returns a tinted (colorized) [slog.Attr] that will be written in red color
+// by the [tint.Handler]. When used with any other [slog.Handler], it behaves as
+//
+//	slog.Any("err", err)
 func Err(err error) slog.Attr {
 	if err != nil {
 		err = tintError{err}
