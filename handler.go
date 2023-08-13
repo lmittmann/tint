@@ -179,7 +179,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 			buf.WriteByte(' ')
 		} else if a := rep(h.groups, slog.Time(slog.TimeKey, val)); a.Key != "" {
 			if a.Value.Kind() == slog.KindTime {
-				h.appendTime(buf, r.Time)
+				h.appendTime(buf, a.Value.Time())
 			} else {
 				appendValue(buf, a.Value, false)
 			}

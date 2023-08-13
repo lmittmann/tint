@@ -261,6 +261,20 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 ERR test err=<nil>`,
 		},
+		{ // https://github.com/lmittmann/tint/pull/26
+			Opts: &tint.Options{
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.TimeKey && len(groups) == 0 {
+						return slog.Time(slog.TimeKey, a.Value.Time().Add(24*time.Hour))
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Error("test")
+			},
+			Want: `Nov 11 23:00:00.000 ERR test`,
+		},
 	}
 
 	for i, test := range tests {
