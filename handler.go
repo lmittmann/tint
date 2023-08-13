@@ -341,7 +341,9 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string) {
 
 	switch attr.Value.Kind() {
 	case slog.KindGroup:
-		groupsPrefix += attr.Key + "."
+		if attr.Key != "" {
+			groupsPrefix += attr.Key + "."
+		}
 		for _, groupAttr := range attr.Value.Group() {
 			h.appendAttr(buf, groupAttr, groupsPrefix)
 		}

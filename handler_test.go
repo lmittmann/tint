@@ -275,6 +275,12 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 11 23:00:00.000 ERR test`,
 		},
+		{
+			F: func(l *slog.Logger) {
+				l.Info("msg", "a", "b", slog.Group("", slog.String("c", "d")), "e", "f")
+			},
+			Want: `Nov 10 23:00:00.000 INF msg a=b c=d e=f`,
+		},
 	}
 
 	for i, test := range tests {
