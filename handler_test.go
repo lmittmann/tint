@@ -275,7 +275,7 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 11 23:00:00.000 ERR test`,
 		},
-		{
+		{ // https://github.com/lmittmann/tint/pull/27
 			F: func(l *slog.Logger) {
 				l.Info("msg", "a", "b", slog.Group("", slog.String("c", "d")), "e", "f")
 			},
