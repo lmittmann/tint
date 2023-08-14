@@ -277,9 +277,9 @@ func TestHandler(t *testing.T) {
 		},
 		{ // https://github.com/lmittmann/tint/pull/27
 			F: func(l *slog.Logger) {
-				l.Info("msg", "a", "b", slog.Group("", slog.String("c", "d")), "e", "f")
+				l.Info("test", "a", "b", slog.Group("", slog.String("c", "d")), "e", "f")
 			},
-			Want: `Nov 10 23:00:00.000 INF msg a=b c=d e=f`,
+			Want: `Nov 10 23:00:00.000 INF test a=b c=d e=f`,
 		},
 	}
 
