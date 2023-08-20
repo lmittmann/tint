@@ -99,7 +99,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:99 test key=val`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:100 test key=val`,
 		},
 		{
 			Opts: &tint.Options{
