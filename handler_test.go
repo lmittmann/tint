@@ -38,7 +38,6 @@ func TestHandler(t *testing.T) {
 		t.Skip(`skipping test; run with "-tags=faketime"`)
 	}
 
-	todo := context.TODO()
 	tests := []struct {
 		Opts *tint.Options
 		F    func(l *slog.Logger)
@@ -99,7 +98,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:100 test key=val`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:99 test key=val`,
 		},
 		{
 			Opts: &tint.Options{
@@ -246,7 +245,7 @@ func TestHandler(t *testing.T) {
 
 		{ // https://github.com/lmittmann/tint/issues/8
 			F: func(l *slog.Logger) {
-				l.Log(todo, slog.LevelInfo+1, "test")
+				l.Log(context.TODO(), slog.LevelInfo+1, "test")
 			},
 			Want: `Nov 10 23:00:00.000 INF+1 test`,
 		},
@@ -349,7 +348,6 @@ func BenchmarkLogAttrs(b *testing.B) {
 		{"discard", new(discarder)},
 	}
 
-	todo := context.TODO()
 	benchmarks := []struct {
 		Name string
 		F    func(*slog.Logger)
@@ -357,7 +355,7 @@ func BenchmarkLogAttrs(b *testing.B) {
 		{
 			"5 args",
 			func(logger *slog.Logger) {
-				logger.LogAttrs(todo, slog.LevelInfo, testMessage,
+				logger.LogAttrs(context.TODO(), slog.LevelInfo, testMessage,
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
@@ -369,7 +367,7 @@ func BenchmarkLogAttrs(b *testing.B) {
 		{
 			"5 args custom level",
 			func(logger *slog.Logger) {
-				logger.LogAttrs(todo, slog.LevelInfo+1, testMessage,
+				logger.LogAttrs(context.TODO(), slog.LevelInfo+1, testMessage,
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
@@ -381,7 +379,7 @@ func BenchmarkLogAttrs(b *testing.B) {
 		{
 			"10 args",
 			func(logger *slog.Logger) {
-				logger.LogAttrs(todo, slog.LevelInfo, testMessage,
+				logger.LogAttrs(context.TODO(), slog.LevelInfo, testMessage,
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
@@ -398,7 +396,7 @@ func BenchmarkLogAttrs(b *testing.B) {
 		{
 			"40 args",
 			func(logger *slog.Logger) {
-				logger.LogAttrs(todo, slog.LevelInfo, testMessage,
+				logger.LogAttrs(context.TODO(), slog.LevelInfo, testMessage,
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
