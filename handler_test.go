@@ -245,7 +245,7 @@ func TestHandler(t *testing.T) {
 
 		{ // https://github.com/lmittmann/tint/issues/8
 			F: func(l *slog.Logger) {
-				l.Log(nil, slog.LevelInfo+1, "test")
+				l.Log(context.TODO(), slog.LevelInfo+1, "test")
 			},
 			Want: `Nov 10 23:00:00.000 INF+1 test`,
 		},
@@ -355,88 +355,88 @@ func BenchmarkLogAttrs(b *testing.B) {
 		{
 			"5 args",
 			func(logger *slog.Logger) {
-				logger.LogAttrs(nil, slog.LevelInfo, testMessage,
+				logger.LogAttrs(context.TODO(), slog.LevelInfo, testMessage,
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
 					slog.Time("time", testTime),
-					slog.Any("error", testError),
+					slog.Any("error", errTest),
 				)
 			},
 		},
 		{
 			"5 args custom level",
 			func(logger *slog.Logger) {
-				logger.LogAttrs(nil, slog.LevelInfo+1, testMessage,
+				logger.LogAttrs(context.TODO(), slog.LevelInfo+1, testMessage,
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
 					slog.Time("time", testTime),
-					slog.Any("error", testError),
+					slog.Any("error", errTest),
 				)
 			},
 		},
 		{
 			"10 args",
 			func(logger *slog.Logger) {
-				logger.LogAttrs(nil, slog.LevelInfo, testMessage,
+				logger.LogAttrs(context.TODO(), slog.LevelInfo, testMessage,
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
 					slog.Time("time", testTime),
-					slog.Any("error", testError),
+					slog.Any("error", errTest),
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
 					slog.Time("time", testTime),
-					slog.Any("error", testError),
+					slog.Any("error", errTest),
 				)
 			},
 		},
 		{
 			"40 args",
 			func(logger *slog.Logger) {
-				logger.LogAttrs(nil, slog.LevelInfo, testMessage,
+				logger.LogAttrs(context.TODO(), slog.LevelInfo, testMessage,
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
 					slog.Time("time", testTime),
-					slog.Any("error", testError),
+					slog.Any("error", errTest),
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
 					slog.Time("time", testTime),
-					slog.Any("error", testError),
+					slog.Any("error", errTest),
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
 					slog.Time("time", testTime),
-					slog.Any("error", testError),
+					slog.Any("error", errTest),
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
 					slog.Time("time", testTime),
-					slog.Any("error", testError),
+					slog.Any("error", errTest),
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
 					slog.Time("time", testTime),
-					slog.Any("error", testError),
+					slog.Any("error", errTest),
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
 					slog.Time("time", testTime),
-					slog.Any("error", testError),
+					slog.Any("error", errTest),
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
 					slog.Time("time", testTime),
-					slog.Any("error", testError),
+					slog.Any("error", errTest),
 					slog.String("string", testString),
 					slog.Int("status", testInt),
 					slog.Duration("duration", testDuration),
 					slog.Time("time", testTime),
-					slog.Any("error", testError),
+					slog.Any("error", errTest),
 				)
 			},
 		},
@@ -471,5 +471,5 @@ var (
 	testString   = "7e3b3b2aaeff56a7108fe11e154200dd/7819479873059528190"
 	testInt      = 32768
 	testDuration = 23 * time.Second
-	testError    = errors.New("fail")
+	errTest      = errors.New("fail")
 )
