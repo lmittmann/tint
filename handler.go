@@ -177,7 +177,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		if rep == nil {
 			h.appendTime(buf, r.Time)
 			buf.WriteByte(' ')
-		} else if a := rep(h.groups, slog.Time(slog.TimeKey, val)); a.Key != "" {
+		} else if a := rep(nil /* groups */, slog.Time(slog.TimeKey, val)); a.Key != "" {
 			if a.Value.Kind() == slog.KindTime {
 				h.appendTime(buf, a.Value.Time())
 			} else {
@@ -191,7 +191,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	if rep == nil {
 		h.appendLevel(buf, r.Level)
 		buf.WriteByte(' ')
-	} else if a := rep(h.groups, slog.Int(slog.LevelKey, int(r.Level))); a.Key != "" {
+	} else if a := rep(nil /* groups */, slog.Int(slog.LevelKey, int(r.Level))); a.Key != "" {
 		if a.Value.Kind() == slog.KindInt64 {
 			h.appendLevel(buf, slog.Level(a.Value.Int64()))
 		} else {
@@ -214,7 +214,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 			if rep == nil {
 				h.appendSource(buf, src)
 				buf.WriteByte(' ')
-			} else if a := rep(h.groups, slog.Any(slog.SourceKey, src)); a.Key != "" {
+			} else if a := rep(nil /* groups */, slog.Any(slog.SourceKey, src)); a.Key != "" {
 				appendValue(buf, a.Value, false)
 				buf.WriteByte(' ')
 			}
@@ -225,7 +225,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	if rep == nil {
 		buf.WriteString(r.Message)
 		buf.WriteByte(' ')
-	} else if a := rep(h.groups, slog.String(slog.MessageKey, r.Message)); a.Key != "" {
+	} else if a := rep(nil /* groups */, slog.String(slog.MessageKey, r.Message)); a.Key != "" {
 		appendValue(buf, a.Value, false)
 		buf.WriteByte(' ')
 	}

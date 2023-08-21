@@ -119,6 +119,17 @@ func TestHandler(t *testing.T) {
 			Want: `INF test key=val`,
 		},
 		{
+			// drop built-in attributes in a grouped log
+			Opts: &tint.Options{
+				ReplaceAttr: drop(slog.TimeKey, slog.LevelKey, slog.MessageKey, slog.SourceKey),
+				AddSource:   true,
+			},
+			F: func(l *slog.Logger) {
+				l.WithGroup("foo").Info("test", "key", "val")
+			},
+			Want: `foo.key=val`,
+		},
+		{
 			Opts: &tint.Options{
 				ReplaceAttr: drop(slog.LevelKey),
 			},
