@@ -119,17 +119,6 @@ func TestHandler(t *testing.T) {
 			Want: `INF test key=val`,
 		},
 		{
-			// drop built-in attributes in a grouped log
-			Opts: &tint.Options{
-				ReplaceAttr: drop(slog.TimeKey, slog.LevelKey, slog.MessageKey, slog.SourceKey),
-				AddSource:   true,
-			},
-			F: func(l *slog.Logger) {
-				l.WithGroup("foo").Info("test", "key", "val")
-			},
-			Want: `foo.key=val`,
-		},
-		{
 			Opts: &tint.Options{
 				ReplaceAttr: drop(slog.LevelKey),
 			},
@@ -291,6 +280,17 @@ func TestHandler(t *testing.T) {
 				l.Info("test", "a", "b", slog.Group("", slog.String("c", "d")), "e", "f")
 			},
 			Want: `Nov 10 23:00:00.000 INF test a=b c=d e=f`,
+		},
+		{ // https://github.com/lmittmann/tint/pull/30
+			// drop built-in attributes in a grouped log
+			Opts: &tint.Options{
+				ReplaceAttr: drop(slog.TimeKey, slog.LevelKey, slog.MessageKey, slog.SourceKey),
+				AddSource:   true,
+			},
+			F: func(l *slog.Logger) {
+				l.WithGroup("group").Info("test", "key", "val")
+			},
+			Want: `group.key=val`,
 		},
 	}
 
