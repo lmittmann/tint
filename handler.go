@@ -192,7 +192,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		h.appendLevel(buf, r.Level)
 		buf.WriteByte(' ')
 	} else if a := rep(nil /* groups */, slog.Int(slog.LevelKey, int(r.Level))); a.Key != "" {
-		if a.Value.Kind() == slog.KindInt64 {
+		if a.Key == slog.LevelKey {
 			h.appendLevel(buf, slog.Level(a.Value.Int64()))
 		} else {
 			appendValue(buf, a.Value, false)
