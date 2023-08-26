@@ -104,6 +104,9 @@ type Options struct {
 
 	// Disable color (Default: false)
 	NoColor bool
+
+	// Labels used for each label (Default: DBG,INF,WRN,ERR)
+	Labels [4]string
 }
 
 // NewHandler creates a [slog.Handler] that writes tinted logs to Writer w,
@@ -127,6 +130,15 @@ func NewHandler(w io.Writer, opts *Options) slog.Handler {
 		h.timeFormat = opts.TimeFormat
 	}
 	h.noColor = opts.NoColor
+
+	h.Labels = [4]string{"DBG", "INF", "WRN", "ERR"}
+
+	for i := range opts.Labels {
+		if opts.Labels[i] != "" {
+			h.Labels[i] = opts.Labels[i]
+		}
+	}
+
 	return h
 }
 
@@ -144,6 +156,8 @@ type handler struct {
 	replaceAttr func([]string, slog.Attr) slog.Attr
 	timeFormat  string
 	noColor     bool
+
+	Labels [4]string
 }
 
 func (h *handler) clone() *handler {
@@ -303,21 +317,21 @@ func (h *handler) appendLevel(buf *buffer, level slog.Level) {
 
 	switch {
 	case level < slog.LevelInfo:
-		buf.WriteString("DBG")
+		buf.WriteString(h.Labels[0])
 		delta(buf, level-slog.LevelDebug)
 	case level < slog.LevelWarn:
 		buf.WriteStringIf(!h.noColor, ansiBrightGreen)
-		buf.WriteString("INF")
+		buf.WriteString(h.Labels[1])
 		delta(buf, level-slog.LevelInfo)
 		buf.WriteStringIf(!h.noColor, ansiReset)
 	case level < slog.LevelError:
 		buf.WriteStringIf(!h.noColor, ansiBrightYellow)
-		buf.WriteString("WRN")
+		buf.WriteString(h.Labels[2])
 		delta(buf, level-slog.LevelWarn)
 		buf.WriteStringIf(!h.noColor, ansiReset)
 	default:
 		buf.WriteStringIf(!h.noColor, ansiBrightRed)
-		buf.WriteString("ERR")
+		buf.WriteString(h.Labels[3])
 		delta(buf, level-slog.LevelError)
 		buf.WriteStringIf(!h.noColor, ansiReset)
 	}

@@ -102,6 +102,16 @@ func TestHandler(t *testing.T) {
 		},
 		{
 			Opts: &tint.Options{
+				AddSource: true,
+				Labels:    [4]string{"DEBUG", "INFO", "WARN", "ERROR"},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: `Nov 10 23:00:00.000 INFO tint/handler_test.go:99 test key=val`,
+		},
+		{
+			Opts: &tint.Options{
 				TimeFormat: time.Kitchen,
 			},
 			F: func(l *slog.Logger) {
