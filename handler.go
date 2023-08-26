@@ -116,7 +116,9 @@ func NewHandler(w io.Writer, opts *Options) slog.Handler {
 		w:          w,
 		level:      defaultLevel,
 		timeFormat: defaultTimeFormat,
+		Labels:     [4]string{"DBG", "INF", "WRN", "ERR"},
 	}
+
 	if opts == nil {
 		return h
 	}
@@ -130,8 +132,6 @@ func NewHandler(w io.Writer, opts *Options) slog.Handler {
 		h.timeFormat = opts.TimeFormat
 	}
 	h.noColor = opts.NoColor
-
-	h.Labels = [4]string{"DBG", "INF", "WRN", "ERR"}
 
 	for i := range opts.Labels {
 		if opts.Labels[i] != "" {
@@ -171,6 +171,7 @@ func (h *handler) clone() *handler {
 		replaceAttr: h.replaceAttr,
 		timeFormat:  h.timeFormat,
 		noColor:     h.noColor,
+		Labels:      h.Labels,
 	}
 }
 
