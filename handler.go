@@ -181,7 +181,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 			if a.Value.Kind() == slog.KindTime {
 				h.appendTime(buf, a.Value.Time())
 			} else {
-				appendValue(buf, a.Value, false)
+				h.appendValue(buf, a.Value, false)
 			}
 			buf.WriteByte(' ')
 		}
@@ -195,7 +195,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		if a.Value.Kind() == slog.KindInt64 {
 			h.appendLevel(buf, slog.Level(a.Value.Int64()))
 		} else {
-			appendValue(buf, a.Value, false)
+			h.appendValue(buf, a.Value, false)
 		}
 		buf.WriteByte(' ')
 	}
@@ -215,7 +215,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 				h.appendSource(buf, src)
 				buf.WriteByte(' ')
 			} else if a := rep(nil /* groups */, slog.Any(slog.SourceKey, src)); a.Key != "" {
-				appendValue(buf, a.Value, false)
+				h.appendValue(buf, a.Value, false)
 				buf.WriteByte(' ')
 			}
 		}
@@ -226,7 +226,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		buf.WriteString(r.Message)
 		buf.WriteByte(' ')
 	} else if a := rep(nil /* groups */, slog.String(slog.MessageKey, r.Message)); a.Key != "" {
-		appendValue(buf, a.Value, false)
+		h.appendValue(buf, a.Value, false)
 		buf.WriteByte(' ')
 	}
 
@@ -357,7 +357,7 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string) {
 		fallthrough
 	default:
 		h.appendKey(buf, attr.Key, groupsPrefix)
-		appendValue(buf, attr.Value, true)
+		h.appendValue(buf, attr.Value, true)
 		buf.WriteByte(' ')
 	}
 }
@@ -369,7 +369,7 @@ func (h *handler) appendKey(buf *buffer, key, groups string) {
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func appendValue(buf *buffer, v slog.Value, quote bool) {
+func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	switch v.Kind() {
 	case slog.KindString:
 		appendString(buf, v.String(), quote)
@@ -386,15 +386,18 @@ func appendValue(buf *buffer, v slog.Value, quote bool) {
 	case slog.KindTime:
 		appendString(buf, v.Time().String(), quote)
 	case slog.KindAny:
-		if tm, ok := v.Any().(encoding.TextMarshaler); ok {
-			data, err := tm.MarshalText()
+		switch cv := v.Any().(type) {
+		case encoding.TextMarshaler:
+			data, err := cv.MarshalText()
 			if err != nil {
 				break
 			}
 			appendString(buf, string(data), quote)
-			break
+		case *slog.Source:
+			h.appendSource(buf, cv)
+		default:
+			appendString(buf, fmt.Sprint(v.Any()), quote)
 		}
-		appendString(buf, fmt.Sprint(v.Any()), quote)
 	}
 }
 

@@ -292,6 +292,18 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `group.key=val`,
 		},
+		{ // https://github.com/lmittmann/tint/pull/37
+			Opts: &tint.Options{
+				AddSource: true,
+				ReplaceAttr: func(g []string, a slog.Attr) slog.Attr {
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test")
+			},
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:303 test`,
+		},
 	}
 
 	for i, test := range tests {
