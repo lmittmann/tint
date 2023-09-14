@@ -191,12 +191,8 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	if rep == nil {
 		h.appendLevel(buf, r.Level)
 		buf.WriteByte(' ')
-	} else if a := rep(nil /* groups */, slog.Int(slog.LevelKey, int(r.Level))); a.Key != "" {
-		if a.Value.Kind() == slog.KindInt64 {
-			h.appendLevel(buf, slog.Level(a.Value.Int64()))
-		} else {
-			h.appendValue(buf, a.Value, false)
-		}
+	} else if a := rep(nil /* groups */, slog.Any(slog.LevelKey, r.Level)); a.Key != "" {
+		h.appendValue(buf, a.Value, false)
 		buf.WriteByte(' ')
 	}
 
@@ -293,34 +289,35 @@ func (h *handler) appendTime(buf *buffer, t time.Time) {
 }
 
 func (h *handler) appendLevel(buf *buffer, level slog.Level) {
-	delta := func(buf *buffer, val slog.Level) {
-		if val == 0 {
-			return
-		}
-		buf.WriteByte('+')
-		*buf = strconv.AppendInt(*buf, int64(val), 10)
-	}
-
 	switch {
 	case level < slog.LevelInfo:
 		buf.WriteString("DBG")
-		delta(buf, level-slog.LevelDebug)
+		appendLevelDelta(buf, level-slog.LevelDebug)
 	case level < slog.LevelWarn:
 		buf.WriteStringIf(!h.noColor, ansiBrightGreen)
 		buf.WriteString("INF")
-		delta(buf, level-slog.LevelInfo)
+		appendLevelDelta(buf, level-slog.LevelInfo)
 		buf.WriteStringIf(!h.noColor, ansiReset)
 	case level < slog.LevelError:
 		buf.WriteStringIf(!h.noColor, ansiBrightYellow)
 		buf.WriteString("WRN")
-		delta(buf, level-slog.LevelWarn)
+		appendLevelDelta(buf, level-slog.LevelWarn)
 		buf.WriteStringIf(!h.noColor, ansiReset)
 	default:
 		buf.WriteStringIf(!h.noColor, ansiBrightRed)
 		buf.WriteString("ERR")
-		delta(buf, level-slog.LevelError)
+		appendLevelDelta(buf, level-slog.LevelError)
 		buf.WriteStringIf(!h.noColor, ansiReset)
 	}
+}
+
+func appendLevelDelta(buf *buffer, delta slog.Level) {
+	if delta == 0 {
+		return
+	} else if delta > 0 {
+		buf.WriteByte('+')
+	}
+	*buf = strconv.AppendInt(*buf, int64(delta), 10)
 }
 
 func (h *handler) appendSource(buf *buffer, src *slog.Source) {
@@ -387,6 +384,8 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 		appendString(buf, v.Time().String(), quote)
 	case slog.KindAny:
 		switch cv := v.Any().(type) {
+		case slog.Level:
+			h.appendLevel(buf, cv)
 		case encoding.TextMarshaler:
 			data, err := cv.MarshalText()
 			if err != nil {
