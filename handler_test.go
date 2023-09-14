@@ -249,6 +249,15 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 INF+1 test`,
 		},
+		{
+			Opts: &tint.Options{
+				Level: slog.LevelDebug - 1,
+			},
+			F: func(l *slog.Logger) {
+				l.Log(context.TODO(), slog.LevelDebug-1, "test")
+			},
+			Want: `Nov 10 23:00:00.000 DBG-1 test`,
+		},
 		{ // https://github.com/lmittmann/tint/issues/12
 			F: func(l *slog.Logger) {
 				l.Error("test", slog.Any("error", errors.New("fail")))
@@ -292,7 +301,21 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `group.key=val`,
 		},
-		{ // https://github.com/lmittmann/tint/pull/37
+		{ // https://github.com/lmittmann/tint/issues/36
+			Opts: &tint.Options{
+				ReplaceAttr: func(g []string, a slog.Attr) slog.Attr {
+					if len(g) == 0 && a.Key == slog.LevelKey {
+						_ = a.Value.Any().(slog.Level)
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test")
+			},
+			Want: `Nov 10 23:00:00.000 INF test`,
+		},
+		{ // https://github.com/lmittmann/tint/issues/37
 			Opts: &tint.Options{
 				AddSource: true,
 				ReplaceAttr: func(g []string, a slog.Attr) slog.Attr {
@@ -302,7 +325,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:303 test`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:326 test`,
 		},
 	}
 
