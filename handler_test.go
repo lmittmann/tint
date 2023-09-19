@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lmittmann/tint"
+	"github.com/jylitalo/tint"
 )
 
 var faketime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
