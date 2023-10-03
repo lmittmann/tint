@@ -400,9 +400,9 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	}
 }
 
-func (h *handler) appendTintError(buf *buffer, err error, groups string) {
+func (h *handler) appendTintError(buf *buffer, err error, groupsPrefix string) {
 	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
-	appendString(buf, h.groupPrefix+groups+errKey, true)
+	appendString(buf, groupsPrefix+errKey, true)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
 	appendString(buf, err.Error(), true)
