@@ -327,6 +327,13 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:326 test`,
 		},
+		{ // https://github.com/lmittmann/tint/issues/44
+			F: func(l *slog.Logger) {
+				l = l.WithGroup("group")
+				l.Error("test", tint.Err(errTest))
+			},
+			Want: `Nov 10 23:00:00.000 ERR test group.err=fail`,
+		},
 	}
 
 	for i, test := range tests {
