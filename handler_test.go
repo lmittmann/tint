@@ -409,17 +409,16 @@ func TestReplaceAttr(t *testing.T) {
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			slogRecord := make([]replaceAttrParams, 0)
-			tintRecord := make([]replaceAttrParams, 0)
-
 			slogLogger := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{
 				ReplaceAttr: replaceAttrRecorder(&slogRecord),
 			}))
+			slogLogger.Log(context.TODO(), slog.LevelInfo, "", test...)
+
+			tintRecord := make([]replaceAttrParams, 0)
 			tintLogger := slog.New(tint.NewHandler(io.Discard, &tint.Options{
 				ReplaceAttr: replaceAttrRecorder(&tintRecord),
 			}))
-
 			tintLogger.Log(context.TODO(), slog.LevelInfo, "", test...)
-			slogLogger.Log(context.TODO(), slog.LevelInfo, "", test...)
 
 			if !slices.EqualFunc(slogRecord, tintRecord, func(a, b replaceAttrParams) bool {
 				return slices.Equal(a.Groups, b.Groups) && a.Attr.Equal(b.Attr)

@@ -233,10 +233,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 
 	// write attributes
 	r.Attrs(func(attr slog.Attr) bool {
-		if rep != nil {
-			attr = rep(h.groups, attr)
-		}
-		h.appendAttr(buf, attr, h.groupPrefix)
+		h.appendAttr(buf, attr, h.groupPrefix, h.groups)
 		return true
 	})
 
@@ -263,10 +260,7 @@ func (h *handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 
 	// write attributes to buffer
 	for _, attr := range attrs {
-		if h.replaceAttr != nil {
-			attr = h.replaceAttr(h.groups, attr)
-		}
-		h.appendAttr(buf, attr, h.groupPrefix)
+		h.appendAttr(buf, attr, h.groupPrefix, h.groups)
 	}
 	h2.attrsPrefix = h.attrsPrefix + string(*buf)
 	return h2
@@ -330,29 +324,30 @@ func (h *handler) appendSource(buf *buffer, src *slog.Source) {
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string) {
+func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, groups []string) {
+	attr.Value = attr.Value.Resolve()
+	if rep := h.replaceAttr; rep != nil && attr.Value.Kind() != slog.KindGroup {
+		attr = rep(groups, attr)
+		attr.Value = attr.Value.Resolve()
+	}
+
 	if attr.Equal(slog.Attr{}) {
 		return
 	}
-	attr.Value = attr.Value.Resolve()
 
-	switch attr.Value.Kind() {
-	case slog.KindGroup:
+	if attr.Value.Kind() == slog.KindGroup {
 		if attr.Key != "" {
 			groupsPrefix += attr.Key + "."
+			groups = append(groups, attr.Key)
 		}
 		for _, groupAttr := range attr.Value.Group() {
-			h.appendAttr(buf, groupAttr, groupsPrefix)
+			h.appendAttr(buf, groupAttr, groupsPrefix, groups)
 		}
-	case slog.KindAny:
-		if err, ok := attr.Value.Any().(tintError); ok {
-			// append tintError
-			h.appendTintError(buf, err, groupsPrefix)
-			buf.WriteByte(' ')
-			break
-		}
-		fallthrough
-	default:
+	} else if err, ok := attr.Value.Any().(tintError); ok {
+		// append tintError
+		h.appendTintError(buf, err, groupsPrefix)
+		buf.WriteByte(' ')
+	} else {
 		h.appendKey(buf, attr.Key, groupsPrefix)
 		h.appendValue(buf, attr.Value, true)
 		buf.WriteByte(' ')
