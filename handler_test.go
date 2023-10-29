@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -98,7 +99,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:99 test key=val`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:100 test key=val`,
 		},
 		{
 			Opts: &tint.Options{
@@ -325,7 +326,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:326 test`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:327 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {
@@ -382,6 +383,50 @@ func replace(new slog.Value, keys ...string) func([]string, slog.Attr) slog.Attr
 			}
 		}
 		return a
+	}
+}
+
+func TestReplaceAttr(t *testing.T) {
+	tests := [][]any{
+		{},
+		{"key", "val"},
+		{"key", "val", slog.Group("group", "key2", "val2")},
+		{"key", "val", slog.Group("group", "key2", "val2", slog.Group("group2", "key3", "val3"))},
+	}
+
+	type replaceAttrParams struct {
+		Groups []string
+		Attr   slog.Attr
+	}
+
+	replaceAttrRecorder := func(record *[]replaceAttrParams) func([]string, slog.Attr) slog.Attr {
+		return func(groups []string, a slog.Attr) slog.Attr {
+			*record = append(*record, replaceAttrParams{groups, a})
+			return a
+		}
+	}
+
+	for i, test := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			slogRecord := make([]replaceAttrParams, 0)
+			tintRecord := make([]replaceAttrParams, 0)
+
+			slogLogger := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{
+				ReplaceAttr: replaceAttrRecorder(&slogRecord),
+			}))
+			tintLogger := slog.New(tint.NewHandler(io.Discard, &tint.Options{
+				ReplaceAttr: replaceAttrRecorder(&tintRecord),
+			}))
+
+			tintLogger.Log(context.TODO(), slog.LevelInfo, "", test...)
+			slogLogger.Log(context.TODO(), slog.LevelInfo, "", test...)
+
+			if !slices.EqualFunc(slogRecord, tintRecord, func(a, b replaceAttrParams) bool {
+				return slices.Equal(a.Groups, b.Groups) && a.Attr.Equal(b.Attr)
+			}) {
+				t.Fatalf("(-want +got)\n- %v\n+ %v", slogRecord, tintRecord)
+			}
+		})
 	}
 }
 
