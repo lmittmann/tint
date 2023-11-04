@@ -39,6 +39,52 @@ slog.SetDefault(slog.New(
 ))
 ```
 
+### Customize Colors
+
+Colors can be customized using the `Options.LevelColors` and `Options.Colors` attributes.
+See [`tint.Options`](https://pkg.go.dev/github.com/lmittmann/tint#Options) for details.
+
+```go
+// ANSI escape codes: https://en.wikipedia.org/wiki/ANSI_escape_code
+const (
+    ansiFaint            = "\033[2m"
+    ansiBrightRed        = "\033[91m"
+    ansiBrightRedFaint   = "\033[91;2m"
+    ansiBrightGreen      = "\033[92m"
+    ansiBrightYellow     = "\033[93m"
+    ansiBrightYellowBold = "\033[93;1m"
+    ansiBrightBlueBold   = "\033[94;1m"
+    ansiBrightMagenta    = "\033[95m"
+)
+
+// create a new logger with custom colors
+w := os.Stderr
+logger := slog.New(
+    tint.NewHandler(w, &tint.Options{
+        LevelColors: map[slog.Level]string{
+            slog.LevelDebug: ansiBrightMagenta,
+            slog.LevelInfo:  ansiBrightGreen,
+            slog.LevelWarn:  ansiBrightYellow,
+            slog.LevelError: ansiBrightRed,
+        },
+		Colors: map[tint.Kind]string{
+            tint.KindTime:            ansiBrightYellowBold,
+            tint.KindSourceFile:      ansiFaint,
+            tint.KindSourceSeparator: ansiFaint,
+            tint.KindSourceLine:      ansiFaint,
+            tint.KindMessage:         ansiBrightBlueBold,
+            tint.KindKey:             ansiFaint,
+            tint.KindSeparator:       ansiFaint,
+            tint.KindValue:           ansiBrightBlueBold,
+            tint.KindErrorKey:        ansiBrightRedFaint,
+            tint.KindErrorSeparator:  ansiBrightRedFaint,
+            tint.KindErrorValue:      ansiBrightRed,
+		},
+    }),
+)
+```
+
+
 ### Customize Attributes
 
 `ReplaceAttr` can be used to alter or drop attributes. If set, it is called on
