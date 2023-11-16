@@ -77,7 +77,10 @@ const (
 	ansiBrightRedFaint = "\033[91;2m"
 )
 
-const errKey = "err"
+const (
+	errKey = "err"
+	badKey = "!BADKEY"
+)
 
 var (
 	defaultLevel      = slog.LevelInfo
@@ -345,7 +348,7 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 		}
 	} else if err, ok := attr.Value.Any().(tintError); ok {
 		// append tintError
-		h.appendTintError(buf, err, groupsPrefix)
+		h.appendTintError(buf, err, attr.Key, groupsPrefix)
 		buf.WriteByte(' ')
 	} else {
 		h.appendKey(buf, attr.Key, groupsPrefix)
@@ -395,9 +398,12 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	}
 }
 
-func (h *handler) appendTintError(buf *buffer, err error, groupsPrefix string) {
+func (h *handler) appendTintError(buf *buffer, err error, key string, groupsPrefix string) {
+	if key == badKey {
+		key = errKey
+	}
 	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
-	appendString(buf, groupsPrefix+errKey, true)
+	appendString(buf, groupsPrefix+key, true)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
 	appendString(buf, err.Error(), true)
@@ -424,15 +430,12 @@ func needsQuoting(s string) bool {
 	return false
 }
 
-type tintError struct{ error }
+type tintError interface{ Error() string }
 
 // Err returns a tinted (colorized) [slog.Attr] that will be written in red color
 // by the [tint.Handler]. When used with any other [slog.Handler], it behaves as
 //
 //	slog.Any("err", err)
 func Err(err error) slog.Attr {
-	if err != nil {
-		err = tintError{err}
-	}
 	return slog.Any(errKey, err)
 }

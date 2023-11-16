@@ -27,7 +27,7 @@ func Example() {
 	slog.Info("Starting server", "addr", ":8080", "env", "production")
 	slog.Debug("Connected to DB", "db", "myapp", "host", "localhost:5432")
 	slog.Warn("Slow request", "method", "GET", "path", "/users", "duration", 497*time.Millisecond)
-	slog.Error("DB connection lost", tint.Err(errors.New("connection reset")), "db", "myapp")
+	slog.Error("DB connection lost", errors.New("connection reset"), "db", "myapp")
 	// Output:
 }
 
@@ -52,13 +52,13 @@ func TestHandler(t *testing.T) {
 		},
 		{
 			F: func(l *slog.Logger) {
-				l.Error("test", tint.Err(errors.New("fail")))
+				l.Error("test", errors.New("fail"))
 			},
 			Want: `Nov 10 23:00:00.000 ERR test err=fail`,
 		},
 		{
 			F: func(l *slog.Logger) {
-				l.Info("test", slog.Group("group", slog.String("key", "val"), tint.Err(errors.New("fail"))))
+				l.Info("test", slog.Group("group", slog.String("key", "val"), errors.New("fail")))
 			},
 			Want: `Nov 10 23:00:00.000 INF test group.key=val group.err=fail`,
 		},
@@ -331,7 +331,7 @@ func TestHandler(t *testing.T) {
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {
 				l = l.WithGroup("group")
-				l.Error("test", tint.Err(errTest))
+				l.Error("test", errTest)
 			},
 			Want: `Nov 10 23:00:00.000 ERR test group.err=fail`,
 		},
@@ -401,6 +401,10 @@ func TestReplaceAttr(t *testing.T) {
 
 	replaceAttrRecorder := func(record *[]replaceAttrParams) func([]string, slog.Attr) slog.Attr {
 		return func(groups []string, a slog.Attr) slog.Attr {
+			// Ignore time since it will be necessarily different when logged at different times
+			if a.Key == "time" {
+				return slog.Attr{}
+			}
 			*record = append(*record, replaceAttrParams{groups, a})
 			return a
 		}
