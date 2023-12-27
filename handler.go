@@ -189,10 +189,10 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 
 	// write level
 	if rep == nil {
-		h.appendLevel(buf, r.Level)
+		h.appendLevel(buf, r.Level, nil)
 		buf.WriteByte(' ')
 	} else if a := rep(nil /* groups */, slog.Any(slog.LevelKey, r.Level)); a.Key != "" {
-		h.appendValue(buf, a.Value, false)
+		h.appendLevel(buf, r.Level, &a.Value)
 		buf.WriteByte(' ')
 	}
 
@@ -282,26 +282,34 @@ func (h *handler) appendTime(buf *buffer, t time.Time) {
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func (h *handler) appendLevel(buf *buffer, level slog.Level) {
+func (h *handler) appendLevel(buf *buffer, level slog.Level, value *slog.Value) {
 	switch {
 	case level < slog.LevelInfo:
-		buf.WriteString("DBG")
+		h.appendValueOrString(buf, value, "DBG")
 		appendLevelDelta(buf, level-slog.LevelDebug)
 	case level < slog.LevelWarn:
 		buf.WriteStringIf(!h.noColor, ansiBrightGreen)
-		buf.WriteString("INF")
+		h.appendValueOrString(buf, value, "INF")
 		appendLevelDelta(buf, level-slog.LevelInfo)
 		buf.WriteStringIf(!h.noColor, ansiReset)
 	case level < slog.LevelError:
 		buf.WriteStringIf(!h.noColor, ansiBrightYellow)
-		buf.WriteString("WRN")
+		h.appendValueOrString(buf, value, "WRN")
 		appendLevelDelta(buf, level-slog.LevelWarn)
 		buf.WriteStringIf(!h.noColor, ansiReset)
 	default:
 		buf.WriteStringIf(!h.noColor, ansiBrightRed)
-		buf.WriteString("ERR")
+		h.appendValueOrString(buf, value, "ERR")
 		appendLevelDelta(buf, level-slog.LevelError)
 		buf.WriteStringIf(!h.noColor, ansiReset)
+	}
+}
+
+func (h *handler) appendValueOrString(buf *buffer, value *slog.Value, str string) {
+	if value != nil {
+		h.appendValue(buf, *value, false)
+	} else {
+		buf.WriteString(str)
 	}
 }
 
@@ -380,7 +388,7 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	case slog.KindAny:
 		switch cv := v.Any().(type) {
 		case slog.Level:
-			h.appendLevel(buf, cv)
+			h.appendLevel(buf, cv, nil)
 		case encoding.TextMarshaler:
 			data, err := cv.MarshalText()
 			if err != nil {
