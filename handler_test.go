@@ -335,6 +335,15 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 ERR test group.err=fail`,
 		},
+		{ // https://github.com/lmittmann/tint/issues/55
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", struct {
+					A int
+					B *string
+				}{A: 123})
+			},
+			Want: `Nov 10 23:00:00.000 INF test key="{A:123 B:<nil>}"`,
+		},
 	}
 
 	for i, test := range tests {
