@@ -363,6 +363,33 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 INF test key="{A:123 B:<nil>}"`,
 		},
+		{ // https://github.com/lmittmann/tint/issues/59
+			Opts: &tint.Options{
+				NoColor: false,
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "color", "\033[92mgreen\033[0m")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\033[92mgreen\033[0m",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "color", "\033[92mgreen quoted\033[0m")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\"\033[92mgreen quoted\033[0m\"",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "color", "\033[92m\"fully green quoted\"\033[0m")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\033[92m\"fully green quoted\"\033[0m",
+		},
 	}
 
 	for i, test := range tests {
