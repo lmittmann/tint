@@ -18,9 +18,23 @@ import (
 
 var faketime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 
+const CustomLevel slog.Level = -6
+
 func Example() {
+	lvlMeta := map[slog.Level]tint.LevelMeta{
+		CustomLevel: {
+			Name:  "TEST",
+			Color: "\033[95m",
+		},
+		slog.LevelDebug: {
+			Name:  "DBG",
+			Color: "\033[94m",
+		},
+	}
+
 	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{
-		Level:      slog.LevelDebug,
+		Level:      CustomLevel,
+		LevelMeta:  lvlMeta,
 		TimeFormat: time.Kitchen,
 	})))
 
@@ -28,6 +42,7 @@ func Example() {
 	slog.Debug("Connected to DB", "db", "myapp", "host", "localhost:5432")
 	slog.Warn("Slow request", "method", "GET", "path", "/users", "duration", 497*time.Millisecond)
 	slog.Error("DB connection lost", tint.Err(errors.New("connection reset")), "db", "myapp")
+	slog.Log(context.Background(), CustomLevel, "Custom level message")
 	// Output:
 }
 
@@ -343,6 +358,21 @@ func TestHandler(t *testing.T) {
 				}{A: 123})
 			},
 			Want: `Nov 10 23:00:00.000 INF test key="{A:123 B:<nil>}"`,
+		},
+		{ // https://github.com/lmittmann/tint/issues/37
+			Opts: &tint.Options{
+				Level: slog.LevelDebug,
+				LevelMeta: map[slog.Level]tint.LevelMeta{
+					slog.LevelDebug: {
+						Name:  "MyDebug",
+						Color: "\033[32m",
+					},
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Debug("test")
+			},
+			Want: `Nov 10 23:00:00.000 MyDebug test`,
 		},
 	}
 

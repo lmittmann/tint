@@ -84,6 +84,12 @@ var (
 	defaultTimeFormat = time.StampMilli
 )
 
+// LevelMeta contains the name and color of a level.
+type LevelMeta struct {
+	Name  string
+	Color string
+}
+
 // Options for a slog.Handler that writes tinted logs. A zero Options consists
 // entirely of default values.
 //
@@ -94,6 +100,10 @@ type Options struct {
 
 	// Minimum level to log (Default: slog.LevelInfo)
 	Level slog.Leveler
+
+	// LevelMeta is a map of level to its name and color. If set, it overrides
+	// the default level names and colors.
+	LevelMeta map[slog.Level]LevelMeta
 
 	// ReplaceAttr is called to rewrite each non-group attribute before it is logged.
 	// See https://pkg.go.dev/log/slog#HandlerOptions for details.
@@ -122,6 +132,11 @@ func NewHandler(w io.Writer, opts *Options) slog.Handler {
 	if opts.Level != nil {
 		h.level = opts.Level
 	}
+
+	if len(opts.LevelMeta) > 0 {
+		h.levelMeta = opts.LevelMeta
+	}
+
 	h.replaceAttr = opts.ReplaceAttr
 	if opts.TimeFormat != "" {
 		h.timeFormat = opts.TimeFormat
@@ -141,6 +156,7 @@ type handler struct {
 
 	addSource   bool
 	level       slog.Leveler
+	levelMeta   map[slog.Level]LevelMeta
 	replaceAttr func([]string, slog.Attr) slog.Attr
 	timeFormat  string
 	noColor     bool
@@ -283,6 +299,10 @@ func (h *handler) appendTime(buf *buffer, t time.Time) {
 }
 
 func (h *handler) appendLevel(buf *buffer, level slog.Level) {
+	if h.applyMeta(buf, level) {
+		return
+	}
+
 	switch {
 	case level < slog.LevelInfo:
 		buf.WriteString("DBG")
@@ -303,6 +323,19 @@ func (h *handler) appendLevel(buf *buffer, level slog.Level) {
 		appendLevelDelta(buf, level-slog.LevelError)
 		buf.WriteStringIf(!h.noColor, ansiReset)
 	}
+}
+
+func (h *handler) applyMeta(buf *buffer, level slog.Level) bool {
+	lvlMeta, ok := h.levelMeta[level]
+	if !ok {
+		return false
+	}
+
+	buf.WriteStringIf(!h.noColor, lvlMeta.Color)
+	buf.WriteString(lvlMeta.Name)
+	buf.WriteStringIf(!h.noColor, ansiReset)
+
+	return true
 }
 
 func appendLevelDelta(buf *buffer, delta slog.Level) {
