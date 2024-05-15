@@ -114,7 +114,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:100 test key=val`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:115 test key=val`,
 		},
 		{
 			Opts: &tint.Options{
@@ -341,7 +341,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:327 test`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:342 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {
@@ -359,7 +359,7 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 INF test key="{A:123 B:<nil>}"`,
 		},
-		{ // https://github.com/lmittmann/tint/issues/37
+		{ // https://github.com/lmittmann/tint/issues/61
 			Opts: &tint.Options{
 				Level: slog.LevelDebug,
 				LevelMeta: map[slog.Level]tint.LevelMeta{
