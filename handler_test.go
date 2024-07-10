@@ -271,14 +271,6 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 ERR test err=<nil>`,
 		},
-		{ // preserve the error attribute name
-			F: func(l *slog.Logger) {
-				te := tint.Err(errors.New("something bad happens"))
-				te.Key = "Error"
-				l.Error("test", te)
-			},
-			Want: `Nov 10 23:00:00.000 ERR test Error="something bad happens"`,
-		},
 		{ // https://github.com/lmittmann/tint/pull/26
 			Opts: &tint.Options{
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
@@ -334,7 +326,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:335 test`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:327 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {
@@ -351,6 +343,14 @@ func TestHandler(t *testing.T) {
 				}{A: 123})
 			},
 			Want: `Nov 10 23:00:00.000 INF test key="{A:123 B:<nil>}"`,
+		},
+		{ // https://github.com/lmittmann/tint/pull/66
+			F: func(l *slog.Logger) {
+				errAttr := tint.Err(errors.New("fail"))
+				errAttr.Key = "error"
+				l.Error("test", errAttr)
+			},
+			Want: `Nov 10 23:00:00.000 ERR test error=fail`,
 		},
 	}
 
