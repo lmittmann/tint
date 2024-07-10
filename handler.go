@@ -72,12 +72,10 @@ const (
 	ansiFaint          = "\033[2m"
 	ansiResetFaint     = "\033[22m"
 	ansiBrightRed      = "\033[91m"
+	ansiBrightRedFaint = "\033[91;2m"
 	ansiBrightGreen    = "\033[92m"
 	ansiBrightYellow   = "\033[93m"
-	ansiBrightRedFaint = "\033[91;2m"
 )
-
-const errKey = "err"
 
 var (
 	defaultLevel      = slog.LevelInfo
@@ -343,9 +341,9 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 		for _, groupAttr := range attr.Value.Group() {
 			h.appendAttr(buf, groupAttr, groupsPrefix, groups)
 		}
-	} else if err, ok := attr.Value.Any().(tintError); ok {
+	} else if err, ok := attr.Value.Any().(error); ok {
 		// append tintError
-		h.appendTintError(buf, err, groupsPrefix)
+		h.appendTintError(buf, attr.Key, err, groupsPrefix)
 		buf.WriteByte(' ')
 	} else {
 		h.appendKey(buf, attr.Key, groupsPrefix)
@@ -395,9 +393,9 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	}
 }
 
-func (h *handler) appendTintError(buf *buffer, err error, groupsPrefix string) {
+func (h *handler) appendTintError(buf *buffer, key string, err error, groupsPrefix string) {
 	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
-	appendString(buf, groupsPrefix+errKey, true)
+	appendString(buf, groupsPrefix+key, true)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
 	appendString(buf, err.Error(), true)
@@ -434,5 +432,5 @@ func Err(err error) slog.Attr {
 	if err != nil {
 		err = tintError{err}
 	}
-	return slog.Any(errKey, err)
+	return slog.Any("err", err)
 }
