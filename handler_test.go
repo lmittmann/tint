@@ -344,6 +344,14 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 INF test key="{A:123 B:<nil>}"`,
 		},
+		{ // https://github.com/lmittmann/tint/pull/66
+			F: func(l *slog.Logger) {
+				errAttr := tint.Err(errors.New("fail"))
+				errAttr.Key = "error"
+				l.Error("test", errAttr)
+			},
+			Want: `Nov 10 23:00:00.000 ERR test error=fail`,
+		},
 	}
 
 	for i, test := range tests {
