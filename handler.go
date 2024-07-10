@@ -68,13 +68,14 @@ import (
 
 // ANSI modes
 const (
-	ansiReset          = "\033[0m"
-	ansiFaint          = "\033[2m"
-	ansiResetFaint     = "\033[22m"
-	ansiBrightRed      = "\033[91m"
-	ansiBrightRedFaint = "\033[91;2m"
-	ansiBrightGreen    = "\033[92m"
-	ansiBrightYellow   = "\033[93m"
+	ansiReset              = "\033[0m"
+	ansiFaint              = "\033[2m"
+	ansiBrightMagentaFaint = "\033[95;2m"
+	ansiResetFaint         = "\033[22m"
+	ansiBrightRed          = "\033[91m"
+	ansiBrightRedFaint     = "\033[91;2m"
+	ansiBrightGreen        = "\033[92m"
+	ansiBrightYellow       = "\033[93m"
 )
 
 var (
@@ -283,8 +284,10 @@ func (h *handler) appendTime(buf *buffer, t time.Time) {
 func (h *handler) appendLevel(buf *buffer, level slog.Level) {
 	switch {
 	case level < slog.LevelInfo:
+		buf.WriteStringIf(!h.noColor, ansiBrightMagentaFaint)
 		buf.WriteString("DBG")
 		appendLevelDelta(buf, level-slog.LevelDebug)
+		buf.WriteStringIf(!h.noColor, ansiReset)
 	case level < slog.LevelWarn:
 		buf.WriteStringIf(!h.noColor, ansiBrightGreen)
 		buf.WriteString("INF")
