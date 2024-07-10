@@ -346,7 +346,7 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 		}
 	} else if err, ok := attr.Value.Any().(error); ok {
 		// append tintError
-		h.appendTintError(buf, attr.Key, err, groupsPrefix)
+		h.appendTintError(buf, err, attr.Key, groupsPrefix)
 		buf.WriteByte(' ')
 	} else {
 		h.appendKey(buf, attr.Key, groupsPrefix)
@@ -396,9 +396,9 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	}
 }
 
-func (h *handler) appendTintError(buf *buffer, key string, err error, groupsPrefix string) {
+func (h *handler) appendTintError(buf *buffer, err error, attrKey, groupsPrefix string) {
 	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
-	appendString(buf, groupsPrefix+key, true)
+	appendString(buf, groupsPrefix+attrKey, true)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
 	appendString(buf, err.Error(), true)
