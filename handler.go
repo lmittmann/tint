@@ -24,6 +24,34 @@ See [slog.HandlerOptions] for details.
 		}),
 	)
 
+# Customize Level and Colors
+
+Options.LevelColorsMap can be used to customize the log level and colors.
+
+	w := os.Stderr
+	logger := slog.New(
+		tint.NewHandler(w, &tint.Options{
+			LevelColorsMap: tint.LevelColorsMapping{
+				slog.LevelDebug: {
+					Name:  "DEBUG",
+					Color: color.FgBlue,
+				},
+				slog.LevelInfo: {
+					Name:  "INFO",
+					Color: color.FgGreen,
+				},
+				slog.LevelWarn: {
+					Name:  "WARN",
+					Color: color.FgYellow,
+				},
+				slog.LevelError: {
+					Name:  "ERROR",
+					Color: color.FgRed,
+				},
+			},
+		}),
+	)
+
 # Automatically Enable Colors
 
 Colors are enabled by default and can be disabled using the Options.NoColor
@@ -99,6 +127,9 @@ type Options struct {
 	// See https://pkg.go.dev/log/slog#HandlerOptions for details.
 	ReplaceAttr func(groups []string, attr slog.Attr) slog.Attr
 
+	// LevelColorsMap maps slog.Level to their LevelColor
+	LevelColorsMap LevelColorsMapping
+
 	// Time format (Default: time.StampMilli)
 	TimeFormat string
 
@@ -126,6 +157,13 @@ func NewHandler(w io.Writer, opts *Options) slog.Handler {
 	if opts.TimeFormat != "" {
 		h.timeFormat = opts.TimeFormat
 	}
+
+	if len(opts.LevelColorsMap) > 0 {
+		h.levelColors = opts.LevelColorsMap.LevelColors()
+	} else {
+		h.levelColors = &LevelColors{}
+	}
+
 	h.noColor = opts.NoColor
 	return h
 }
@@ -141,6 +179,7 @@ type handler struct {
 
 	addSource   bool
 	level       slog.Leveler
+	levelColors *LevelColors
 	replaceAttr func([]string, slog.Attr) slog.Attr
 	timeFormat  string
 	noColor     bool
@@ -154,6 +193,7 @@ func (h *handler) clone() *handler {
 		w:           h.w,
 		addSource:   h.addSource,
 		level:       h.level,
+		levelColors: h.levelColors.Copy(),
 		replaceAttr: h.replaceAttr,
 		timeFormat:  h.timeFormat,
 		noColor:     h.noColor,
@@ -283,6 +323,14 @@ func (h *handler) appendTime(buf *buffer, t time.Time) {
 }
 
 func (h *handler) appendLevel(buf *buffer, level slog.Level) {
+	// check if a LevelColor is defined
+	if h.levelColors != nil {
+		if levelColor := h.levelColors.LevelColor(level); levelColor != nil {
+			buf.WriteString(levelColor.String(!h.noColor))
+			return
+		}
+	}
+
 	switch {
 	case level < slog.LevelInfo:
 		buf.WriteString("DBG")
