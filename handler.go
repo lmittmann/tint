@@ -68,13 +68,14 @@ import (
 
 // ANSI modes
 const (
-	ansiReset          = "\033[0m"
-	ansiFaint          = "\033[2m"
-	ansiResetFaint     = "\033[22m"
-	ansiBrightRed      = "\033[91m"
-	ansiBrightGreen    = "\033[92m"
-	ansiBrightYellow   = "\033[93m"
-	ansiBrightRedFaint = "\033[91;2m"
+	ansiReset           = "\033[0m"
+	ansiFaint           = "\033[2m"
+	ansiResetFaint      = "\033[22m"
+	ansiColorDebug      = ""
+	ansiColorInfo       = "\033[92m"
+	ansiColorWarn       = "\033[93m"
+	ansiColorError      = "\033[91m"
+	ansiColorErrorFaint = "\033[91;2m"
 )
 
 const errKey = "err"
@@ -83,6 +84,26 @@ var (
 	defaultLevel      = slog.LevelInfo
 	defaultTimeFormat = time.StampMilli
 )
+
+// Colors for the [Options].
+type Colors struct {
+	AnsiColorDebug      string
+	AnsiColorInfo       string
+	AnsiColorWarn       string
+	AnsiColorError      string
+	AnsiColorErrorFaint string
+}
+
+// NewColorsDefault creates the default colors.
+func NewColorsDefault() Colors {
+	return Colors{
+		AnsiColorDebug:      ansiColorDebug,
+		AnsiColorInfo:       ansiColorInfo,
+		AnsiColorWarn:       ansiColorWarn,
+		AnsiColorError:      ansiColorError,
+		AnsiColorErrorFaint: ansiColorErrorFaint,
+	}
+}
 
 // Options for a slog.Handler that writes tinted logs. A zero Options consists
 // entirely of default values.
@@ -104,6 +125,7 @@ type Options struct {
 
 	// Disable color (Default: false)
 	NoColor bool
+	Colors  func() Colors
 }
 
 // NewHandler creates a [slog.Handler] that writes tinted logs to Writer w,
@@ -127,6 +149,11 @@ func NewHandler(w io.Writer, opts *Options) slog.Handler {
 		h.timeFormat = opts.TimeFormat
 	}
 	h.noColor = opts.NoColor
+	if opts.Colors != nil {
+		h.colors = opts.Colors()
+	} else {
+		h.colors = NewColorsDefault()
+	}
 	return h
 }
 
@@ -144,6 +171,7 @@ type handler struct {
 	replaceAttr func([]string, slog.Attr) slog.Attr
 	timeFormat  string
 	noColor     bool
+	colors      Colors
 }
 
 func (h *handler) clone() *handler {
@@ -285,20 +313,22 @@ func (h *handler) appendTime(buf *buffer, t time.Time) {
 func (h *handler) appendLevel(buf *buffer, level slog.Level) {
 	switch {
 	case level < slog.LevelInfo:
+		buf.WriteStringIf(!h.noColor, h.colors.AnsiColorDebug)
 		buf.WriteString("DBG")
 		appendLevelDelta(buf, level-slog.LevelDebug)
+		buf.WriteStringIf(!h.noColor, ansiReset)
 	case level < slog.LevelWarn:
-		buf.WriteStringIf(!h.noColor, ansiBrightGreen)
+		buf.WriteStringIf(!h.noColor, h.colors.AnsiColorInfo)
 		buf.WriteString("INF")
 		appendLevelDelta(buf, level-slog.LevelInfo)
 		buf.WriteStringIf(!h.noColor, ansiReset)
 	case level < slog.LevelError:
-		buf.WriteStringIf(!h.noColor, ansiBrightYellow)
+		buf.WriteStringIf(!h.noColor, h.colors.AnsiColorWarn)
 		buf.WriteString("WRN")
 		appendLevelDelta(buf, level-slog.LevelWarn)
 		buf.WriteStringIf(!h.noColor, ansiReset)
 	default:
-		buf.WriteStringIf(!h.noColor, ansiBrightRed)
+		buf.WriteStringIf(!h.noColor, h.colors.AnsiColorError)
 		buf.WriteString("ERR")
 		appendLevelDelta(buf, level-slog.LevelError)
 		buf.WriteStringIf(!h.noColor, ansiReset)
@@ -396,7 +426,7 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 }
 
 func (h *handler) appendTintError(buf *buffer, err error, attrKey, groupsPrefix string) {
-	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
+	buf.WriteStringIf(!h.noColor, h.colors.AnsiColorErrorFaint)
 	appendString(buf, groupsPrefix+attrKey, true)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
