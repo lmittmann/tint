@@ -68,14 +68,14 @@ import (
 
 // ANSI modes
 const (
-	ansiReset           = "\033[0m"
-	ansiFaint           = "\033[2m"
-	ansiResetFaint      = "\033[22m"
-	ansiColorDebug      = ""
-	ansiColorInfo       = "\033[92m"
-	ansiColorWarn       = "\033[93m"
-	ansiColorError      = "\033[91m"
-	ansiColorErrorFaint = "\033[91;2m"
+	ansiReset         = "\033[0m"
+	ansiFaint         = "\033[2m"
+	ansiResetFaint    = "\033[22m"
+	ansiColorDebug    = ""
+	ansiColorInfo     = "\033[92m"
+	ansiColorWarn     = "\033[93m"
+	ansiColorError    = "\033[91m"
+	ansiColorErrorKey = "\033[91;2m"
 )
 
 const errKey = "err"
@@ -87,21 +87,27 @@ var (
 
 // Colors for the [Options].
 type Colors struct {
-	AnsiColorDebug      string
-	AnsiColorInfo       string
-	AnsiColorWarn       string
-	AnsiColorError      string
-	AnsiColorErrorFaint string
+	// Color for all debug log messages.
+	AnsiColorDebug string
+	// Color for all info log messages.
+	AnsiColorInfo string
+	// Color for all warn log messages.
+	AnsiColorWarn string
+	// Color for all error log messages.
+	AnsiColorError string
+
+	// Color for `slog` values with type error.
+	AnsiColorErrorKey string
 }
 
-// NewColorsDefault creates the default colors.
+// NewColorsDefault creates the default ANSI escape colors.
 func NewColorsDefault() Colors {
 	return Colors{
-		AnsiColorDebug:      ansiColorDebug,
-		AnsiColorInfo:       ansiColorInfo,
-		AnsiColorWarn:       ansiColorWarn,
-		AnsiColorError:      ansiColorError,
-		AnsiColorErrorFaint: ansiColorErrorFaint,
+		AnsiColorDebug:    ansiColorDebug,
+		AnsiColorInfo:     ansiColorInfo,
+		AnsiColorWarn:     ansiColorWarn,
+		AnsiColorError:    ansiColorError,
+		AnsiColorErrorKey: ansiColorErrorKey,
 	}
 }
 
@@ -426,7 +432,7 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 }
 
 func (h *handler) appendTintError(buf *buffer, err error, attrKey, groupsPrefix string) {
-	buf.WriteStringIf(!h.noColor, h.colors.AnsiColorErrorFaint)
+	buf.WriteStringIf(!h.noColor, h.colors.AnsiColorErrorKey)
 	appendString(buf, groupsPrefix+attrKey, true)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
