@@ -32,14 +32,12 @@ Create a new logger that writes all errors in red:
 	logger := slog.New(
 		tint.NewHandler(w, &tint.Options{
 			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-				err, ok := a.Value.Any().(error)
-				if !ok {
-					return a
+				if err, ok := a.Value.Any().(error); ok {
+					aErr := tint.Err(err)
+					aErr.Key = a.Key
+					return aErr
 				}
-
-				aErr = tint.Err(err)
-				aErr.Key = a.Key
-				return aErr
+				return a
 			},
 		}),
 	)
