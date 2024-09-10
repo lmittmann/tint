@@ -12,6 +12,8 @@ Options.ReplaceAttr can be used to alter or drop attributes. If set, it is
 called on each non-group attribute before it is logged.
 See [slog.HandlerOptions] for details.
 
+Create a new logger that doesn't write the time:
+
 	w := os.Stderr
 	logger := slog.New(
 		tint.NewHandler(w, &tint.Options{
@@ -20,6 +22,24 @@ See [slog.HandlerOptions] for details.
 					return slog.Attr{}
 				}
 				return a
+			},
+		}),
+	)
+
+Create a new logger that writes all errors in red:
+
+	w := os.Stderr
+	logger := slog.New(
+		tint.NewHandler(w, &tint.Options{
+			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+				err, ok := a.Value.Any().(error)
+				if !ok {
+					return a
+				}
+
+				aErr = tint.Err(err)
+				aErr.Key = a.Key
+				return aErr
 			},
 		}),
 	)
