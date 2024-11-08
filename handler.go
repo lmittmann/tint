@@ -120,6 +120,9 @@ type Options struct {
 	// Time format (Default: time.StampMilli)
 	TimeFormat string
 
+	// Disable time (Default: false)
+	NoTime bool
+
 	// Disable color (Default: false)
 	NoColor bool
 }
@@ -144,6 +147,7 @@ func NewHandler(w io.Writer, opts *Options) slog.Handler {
 	if opts.TimeFormat != "" {
 		h.timeFormat = opts.TimeFormat
 	}
+	h.noTime = opts.NoTime
 	h.noColor = opts.NoColor
 	return h
 }
@@ -161,6 +165,7 @@ type handler struct {
 	level       slog.Leveler
 	replaceAttr func([]string, slog.Attr) slog.Attr
 	timeFormat  string
+	noTime      bool
 	noColor     bool
 }
 
@@ -174,6 +179,7 @@ func (h *handler) clone() *handler {
 		level:       h.level,
 		replaceAttr: h.replaceAttr,
 		timeFormat:  h.timeFormat,
+		noTime:      h.noTime,
 		noColor:     h.noColor,
 	}
 }
@@ -190,7 +196,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	rep := h.replaceAttr
 
 	// write time
-	if !r.Time.IsZero() {
+	if !h.noTime && !r.Time.IsZero() {
 		val := r.Time.Round(0) // strip monotonic to match Attr behavior
 		if rep == nil {
 			h.appendTime(buf, r.Time)

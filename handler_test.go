@@ -352,6 +352,15 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 ERR test error=fail`,
 		},
+		{
+			Opts: &tint.Options{
+				NoTime: true,
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "val")
+			},
+			Want: `INF test key=val`,
+		},
 	}
 
 	for i, test := range tests {
