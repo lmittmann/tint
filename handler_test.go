@@ -21,7 +21,7 @@ var faketime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 func Example() {
 	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{
 		Level:      slog.LevelDebug,
-		TimeFormat: time.Kitchen,
+		TimeFormat: time.Kitchen, Multiline: true,
 	})))
 
 	slog.Info("Starting server", "addr", ":8080", "env", "production")
@@ -351,6 +351,19 @@ func TestHandler(t *testing.T) {
 				l.Error("test", errAttr)
 			},
 			Want: `Nov 10 23:00:00.000 ERR test error=fail`,
+		},
+		{
+			Opts: &tint.Options{
+				Multiline: true,
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test",
+					"key1", "val1",
+					"key2", "val2")
+			},
+			Want: `Nov 10 23:00:00.000 INF test` + "\n" +
+				`  key1=val1` + "\n" +
+				`  key2=val2`,
 		},
 	}
 

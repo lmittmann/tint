@@ -122,6 +122,10 @@ type Options struct {
 
 	// Disable color (Default: false)
 	NoColor bool
+
+	// Multiline determines if each log entry should be written on a new line.
+	// (Default: false)
+	Multiline bool
 }
 
 // NewHandler creates a [slog.Handler] that writes tinted logs to Writer w,
@@ -145,6 +149,7 @@ func NewHandler(w io.Writer, opts *Options) slog.Handler {
 		h.timeFormat = opts.TimeFormat
 	}
 	h.noColor = opts.NoColor
+	h.multiline = opts.Multiline
 	return h
 }
 
@@ -162,6 +167,7 @@ type handler struct {
 	replaceAttr func([]string, slog.Attr) slog.Attr
 	timeFormat  string
 	noColor     bool
+	multiline   bool
 }
 
 func (h *handler) clone() *handler {
@@ -175,6 +181,7 @@ func (h *handler) clone() *handler {
 		replaceAttr: h.replaceAttr,
 		timeFormat:  h.timeFormat,
 		noColor:     h.noColor,
+		multiline:   h.multiline,
 	}
 }
 
@@ -238,10 +245,10 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	// write message
 	if rep == nil {
 		buf.WriteString(r.Message)
-		buf.WriteByte(' ')
+		h.appendSeparator(buf)
 	} else if a := rep(nil /* groups */, slog.String(slog.MessageKey, r.Message)); a.Key != "" {
 		h.appendValue(buf, a.Value, false)
-		buf.WriteByte(' ')
+		h.appendSeparator(buf)
 	}
 
 	// write handler attributes
@@ -292,6 +299,14 @@ func (h *handler) WithGroup(name string) slog.Handler {
 	h2.groupPrefix += name + "."
 	h2.groups = append(h2.groups, name)
 	return h2
+}
+
+func (h *handler) appendSeparator(buf *buffer) {
+	if h.multiline {
+		buf.WriteByte('\n')
+	} else {
+		buf.WriteByte(' ')
+	}
 }
 
 func (h *handler) appendTime(buf *buffer, t time.Time) {
@@ -361,15 +376,22 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 		for _, groupAttr := range attr.Value.Group() {
 			h.appendAttr(buf, groupAttr, groupsPrefix, groups)
 		}
-	} else if err, ok := attr.Value.Any().(tintError); ok {
-		// append tintError
-		h.appendTintError(buf, err, attr.Key, groupsPrefix)
-		buf.WriteByte(' ')
-	} else {
-		h.appendKey(buf, attr.Key, groupsPrefix)
-		h.appendValue(buf, attr.Value, true)
-		buf.WriteByte(' ')
+		return
 	}
+
+	if h.multiline {
+		buf.WriteString("  ")
+	}
+
+	if err, ok := attr.Value.Any().(tintError); ok {
+		h.appendTintError(buf, err, attr.Key, groupsPrefix)
+		h.appendSeparator(buf)
+		return
+	}
+
+	h.appendKey(buf, attr.Key, groupsPrefix)
+	h.appendValue(buf, attr.Value, true)
+	h.appendSeparator(buf)
 }
 
 func (h *handler) appendKey(buf *buffer, key, groups string) {
