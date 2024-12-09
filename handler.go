@@ -413,7 +413,7 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	}
 }
 
-func (h *handler) appendTintError(buf *buffer, err error, attrKey, groupsPrefix string) {
+func (h *handler) appendTintError(buf *buffer, err tintError, attrKey, groupsPrefix string) {
 	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
 	appendString(buf, groupsPrefix+attrKey, true)
 	buf.WriteByte('=')
