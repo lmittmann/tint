@@ -404,6 +404,10 @@ func replace(new slog.Value, keys ...string) func([]string, slog.Attr) slog.Attr
 }
 
 func TestReplaceAttr(t *testing.T) {
+	if !faketime.Equal(time.Now()) {
+		t.Skip(`skipping test; run with "-tags=faketime"`)
+	}
+
 	tests := [][]any{
 		{},
 		{"key", "val"},
