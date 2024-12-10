@@ -356,7 +356,6 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 	switch attr.Value.Kind() {
 	case slog.KindAny:
 		if err, ok := attr.Value.Any().(tintError); ok {
-			// append tintError
 			h.appendTintError(buf, err, attr.Key, groupsPrefix)
 			buf.WriteByte(' ')
 			return
