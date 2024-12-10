@@ -353,7 +353,14 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 		return
 	}
 
-	if attr.Value.Kind() == slog.KindGroup {
+	switch attr.Value.Kind() {
+	case slog.KindAny:
+		if err, ok := attr.Value.Any().(tintError); ok {
+			h.appendTintError(buf, err, attr.Key, groupsPrefix)
+			buf.WriteByte(' ')
+			return
+		}
+	case slog.KindGroup:
 		if attr.Key != "" {
 			groupsPrefix += attr.Key + "."
 			groups = append(groups, attr.Key)
@@ -361,15 +368,12 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 		for _, groupAttr := range attr.Value.Group() {
 			h.appendAttr(buf, groupAttr, groupsPrefix, groups)
 		}
-	} else if err, ok := attr.Value.Any().(tintError); ok {
-		// append tintError
-		h.appendTintError(buf, err, attr.Key, groupsPrefix)
-		buf.WriteByte(' ')
-	} else {
-		h.appendKey(buf, attr.Key, groupsPrefix)
-		h.appendValue(buf, attr.Value, true)
-		buf.WriteByte(' ')
+		return
 	}
+
+	h.appendKey(buf, attr.Key, groupsPrefix)
+	h.appendValue(buf, attr.Value, true)
+	buf.WriteByte(' ')
 }
 
 func (h *handler) appendKey(buf *buffer, key, groups string) {
