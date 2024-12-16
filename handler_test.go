@@ -554,6 +554,14 @@ func BenchmarkLogAttrs(b *testing.B) {
 				)
 			},
 		},
+		{
+			"error",
+			func(logger *slog.Logger) {
+				logger.LogAttrs(context.TODO(), slog.LevelError, testMessage,
+					tint.Err(errTest),
+				)
+			},
+		},
 	}
 
 	for _, h := range handler {
