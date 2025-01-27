@@ -399,6 +399,14 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 INF test color="green quoted"`,
 		},
+		{ // https://github.com/lmittmann/tint/pull/66
+			F: func(l *slog.Logger) {
+				errAttr := tint.Err(errors.New("fail"))
+				errAttr.Key = "error"
+				l.Error("test", errAttr)
+			},
+			Want: `Nov 10 23:00:00.000 ERR test error=fail`,
+		},
 	}
 
 	for i, test := range tests {
@@ -450,6 +458,10 @@ func replace(new slog.Value, keys ...string) func([]string, slog.Attr) slog.Attr
 }
 
 func TestReplaceAttr(t *testing.T) {
+	if !faketime.Equal(time.Now()) {
+		t.Skip(`skipping test; run with "-tags=faketime"`)
+	}
+
 	tests := [][]any{
 		{},
 		{"key", "val"},
@@ -597,6 +609,14 @@ func BenchmarkLogAttrs(b *testing.B) {
 					slog.Duration("duration", testDuration),
 					slog.Time("time", testTime),
 					slog.Any("error", errTest),
+				)
+			},
+		},
+		{
+			"error",
+			func(logger *slog.Logger) {
+				logger.LogAttrs(context.TODO(), slog.LevelError, testMessage,
+					tint.Err(errTest),
 				)
 			},
 		},

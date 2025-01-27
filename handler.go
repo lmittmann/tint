@@ -12,12 +12,30 @@ Options.ReplaceAttr can be used to alter or drop attributes. If set, it is
 called on each non-group attribute before it is logged.
 See [slog.HandlerOptions] for details.
 
+Create a new logger that doesn't write the time:
+
 	w := os.Stderr
 	logger := slog.New(
 		tint.NewHandler(w, &tint.Options{
 			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 				if a.Key == slog.TimeKey && len(groups) == 0 {
 					return slog.Attr{}
+				}
+				return a
+			},
+		}),
+	)
+
+Create a new logger that writes all errors in red:
+
+	w := os.Stderr
+	logger := slog.New(
+		tint.NewHandler(w, &tint.Options{
+			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+				if err, ok := a.Value.Any().(error); ok {
+					aErr := tint.Err(err)
+					aErr.Key = a.Key
+					return aErr
 				}
 				return a
 			},
@@ -335,7 +353,14 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 		return
 	}
 
-	if attr.Value.Kind() == slog.KindGroup {
+	switch attr.Value.Kind() {
+	case slog.KindAny:
+		if err, ok := attr.Value.Any().(tintError); ok {
+			h.appendTintError(buf, err, attr.Key, groupsPrefix)
+			buf.WriteByte(' ')
+			return
+		}
+	case slog.KindGroup:
 		if attr.Key != "" {
 			groupsPrefix += attr.Key + "."
 			groups = append(groups, attr.Key)
@@ -343,15 +368,12 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 		for _, groupAttr := range attr.Value.Group() {
 			h.appendAttr(buf, groupAttr, groupsPrefix, groups)
 		}
-	} else if err, ok := attr.Value.Any().(tintError); ok {
-		// append tintError
-		h.appendTintError(buf, err, groupsPrefix)
-		buf.WriteByte(' ')
-	} else {
-		h.appendKey(buf, attr.Key, groupsPrefix)
-		h.appendValue(buf, attr.Value, true)
-		buf.WriteByte(' ')
+		return
 	}
+
+	h.appendKey(buf, attr.Key, groupsPrefix)
+	h.appendValue(buf, attr.Value, true)
+	buf.WriteByte(' ')
 }
 
 func (h *handler) appendKey(buf *buffer, key, groups string) {
@@ -395,9 +417,9 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	}
 }
 
-func (h *handler) appendTintError(buf *buffer, err error, groupsPrefix string) {
+func (h *handler) appendTintError(buf *buffer, err tintError, attrKey, groupsPrefix string) {
 	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
-	appendString(buf, groupsPrefix+errKey, true)
+	appendString(buf, groupsPrefix+attrKey, true)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
 	appendString(buf, err.Error(), true)
