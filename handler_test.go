@@ -352,6 +352,19 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 ERR test error=fail`,
 		},
+		{ // https://github.com/lmittmann/tint/issues/85
+			F: func(l *slog.Logger) {
+				var t *time.Time
+				l.Info("test", "time", t)
+			},
+			Want: `Nov 10 23:00:00.000 INF test time=<nil>`,
+		},
+		{
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", new(panicStringer), "key2", new(panicValuer))
+			},
+			Want: `Nov 10 23:00:00.000 INF test key="!PANIC:" key2="!PANIC:"`,
+		},
 	}
 
 	for i, test := range tests {
@@ -599,3 +612,13 @@ var (
 	testDuration = 23 * time.Second
 	errTest      = errors.New("fail")
 )
+
+// panicStringer is a [fmt.Stringer] that panics when String is called.
+type panicStringer struct{}
+
+func (s *panicStringer) String() string { panic(0) }
+
+// panicValuer is a [slog.Valuer] that panics when LogValue is called.
+type panicValuer struct{}
+
+func (v *panicValuer) LogValue() slog.Value { panic(0) }
