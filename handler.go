@@ -79,6 +79,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"unicode"
@@ -87,13 +88,15 @@ import (
 
 // ANSI modes
 const (
-	ansiReset          = "\033[0m"
-	ansiFaint          = "\033[2m"
-	ansiResetFaint     = "\033[22m"
-	ansiBrightRed      = "\033[91m"
-	ansiBrightGreen    = "\033[92m"
-	ansiBrightYellow   = "\033[93m"
-	ansiBrightRedFaint = "\033[91;2m"
+	ansiReset          = "\u001b[0m"
+	ansiFaint          = "\u001b[2m"
+	ansiResetFaint     = "\u001b[22m"
+	ansiBrightRed      = "\u001b[91m"
+	ansiBrightGreen    = "\u001b[92m"
+	ansiBrightYellow   = "\u001b[93m"
+	ansiBrightRedFaint = "\u001b[91;2m"
+
+	ansiEsc = '\u001b'
 )
 
 const errKey = "err"
@@ -379,7 +382,7 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 
 func (h *handler) appendKey(buf *buffer, key, groups string) {
 	buf.WriteStringIf(!h.noColor, ansiFaint)
-	appendString(buf, groups+key, true)
+	appendString(buf, groups+key, true, !h.noColor)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
@@ -387,7 +390,7 @@ func (h *handler) appendKey(buf *buffer, key, groups string) {
 func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	switch v.Kind() {
 	case slog.KindString:
-		appendString(buf, v.String(), quote)
+		appendString(buf, v.String(), quote, !h.noColor)
 	case slog.KindInt64:
 		*buf = strconv.AppendInt(*buf, v.Int64(), 10)
 	case slog.KindUint64:
@@ -397,9 +400,9 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	case slog.KindBool:
 		*buf = strconv.AppendBool(*buf, v.Bool())
 	case slog.KindDuration:
-		appendString(buf, v.Duration().String(), quote)
+		appendString(buf, v.Duration().String(), quote, !h.noColor)
 	case slog.KindTime:
-		appendString(buf, v.Time().String(), quote)
+		appendString(buf, v.Time().String(), quote, !h.noColor)
 	case slog.KindAny:
 		switch cv := v.Any().(type) {
 		case slog.Level:
@@ -409,30 +412,66 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 			if err != nil {
 				break
 			}
-			appendString(buf, string(data), quote)
+			appendString(buf, string(data), quote, !h.noColor)
 		case *slog.Source:
 			h.appendSource(buf, cv)
 		default:
-			appendString(buf, fmt.Sprintf("%+v", v.Any()), quote)
+			appendString(buf, fmt.Sprintf("%+v", v.Any()), quote, !h.noColor)
 		}
 	}
 }
 
 func (h *handler) appendTintError(buf *buffer, err tintError, attrKey, groupsPrefix string) {
 	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
-	appendString(buf, groupsPrefix+attrKey, true)
+	appendString(buf, groupsPrefix+attrKey, true, !h.noColor)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
-	appendString(buf, err.Error(), true)
+	appendString(buf, err.Error(), true, !h.noColor)
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func appendString(buf *buffer, s string, quote bool) {
-	if quote && needsQuoting(s) {
+func appendString(buf *buffer, s string, quote, color bool) {
+	if quote && !color {
+		// trim ANSI escape sequences
+		var inEscape bool
+		s = cut(s, func(r rune) bool {
+			if r == ansiEsc {
+				inEscape = true
+			} else if inEscape && unicode.IsLetter(r) {
+				inEscape = false
+				return true
+			}
+
+			return inEscape
+		})
+	}
+
+	quote = quote && needsQuoting(s)
+	switch {
+	case color && quote:
+		s = strconv.Quote(s)
+		s = strings.ReplaceAll(s, `\x1b`, string(ansiEsc))
+		buf.WriteString(s)
+	case !color && quote:
 		*buf = strconv.AppendQuote(*buf, s)
-	} else {
+	default:
 		buf.WriteString(s)
 	}
+}
+
+func cut(s string, f func(r rune) bool) string {
+	var res []rune
+	for i := 0; i < len(s); {
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if r == utf8.RuneError {
+			break
+		}
+		if !f(r) {
+			res = append(res, r)
+		}
+		i += size
+	}
+	return string(res)
 }
 
 // Copied from log/slog/text_handler.go.
