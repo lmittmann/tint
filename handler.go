@@ -77,6 +77,7 @@ import (
 	"io"
 	"log/slog"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strconv"
 	"sync"
@@ -400,6 +401,24 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	case slog.KindTime:
 		appendString(buf, v.Time().String(), quote)
 	case slog.KindAny:
+		defer func() {
+			// Copied from log/slog/handler.go.
+			if r := recover(); r != nil {
+				// If it panics with a nil pointer, the most likely cases are
+				// an encoding.TextMarshaler or error fails to guard against nil,
+				// in which case "<nil>" seems to be the feasible choice.
+				//
+				// Adapted from the code in fmt/print.go.
+				if v := reflect.ValueOf(v.Any()); v.Kind() == reflect.Pointer && v.IsNil() {
+					appendString(buf, "<nil>", false)
+					return
+				}
+
+				// Otherwise just print the original panic message.
+				appendString(buf, fmt.Sprintf("!PANIC: %v", r), true)
+			}
+		}()
+
 		switch cv := v.Any().(type) {
 		case slog.Level:
 			h.appendLevel(buf, cv)
@@ -412,7 +431,7 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 		case *slog.Source:
 			h.appendSource(buf, cv)
 		default:
-			appendString(buf, fmt.Sprintf("%+v", v.Any()), quote)
+			appendString(buf, fmt.Sprintf("%+v", cv), quote)
 		}
 	}
 }
