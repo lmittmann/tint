@@ -95,15 +95,17 @@ func TestHandler(t *testing.T) {
 		{
 			Opts: &tint.Options{
 				AddSource: true,
+				NoColor:   true,
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:100 test key=val`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:101 test key=val`,
 		},
 		{
 			Opts: &tint.Options{
 				TimeFormat: time.Kitchen,
+				NoColor:    true,
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
@@ -113,6 +115,7 @@ func TestHandler(t *testing.T) {
 		{
 			Opts: &tint.Options{
 				ReplaceAttr: drop(slog.TimeKey),
+				NoColor:     true,
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
@@ -122,6 +125,7 @@ func TestHandler(t *testing.T) {
 		{
 			Opts: &tint.Options{
 				ReplaceAttr: drop(slog.LevelKey),
+				NoColor:     true,
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
@@ -131,6 +135,7 @@ func TestHandler(t *testing.T) {
 		{
 			Opts: &tint.Options{
 				ReplaceAttr: drop(slog.MessageKey),
+				NoColor:     true,
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
@@ -140,6 +145,7 @@ func TestHandler(t *testing.T) {
 		{
 			Opts: &tint.Options{
 				ReplaceAttr: drop(slog.TimeKey, slog.LevelKey, slog.MessageKey),
+				NoColor:     true,
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
@@ -149,6 +155,7 @@ func TestHandler(t *testing.T) {
 		{
 			Opts: &tint.Options{
 				ReplaceAttr: drop("key"),
+				NoColor:     true,
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
@@ -158,6 +165,7 @@ func TestHandler(t *testing.T) {
 		{
 			Opts: &tint.Options{
 				ReplaceAttr: drop("key"),
+				NoColor:     true,
 			},
 			F: func(l *slog.Logger) {
 				l.WithGroup("group").Info("test", "key", "val", "key2", "val2")
@@ -172,6 +180,7 @@ func TestHandler(t *testing.T) {
 					}
 					return a
 				},
+				NoColor: true,
 			},
 			F: func(l *slog.Logger) {
 				l.WithGroup("group").Info("test", "key", "val", "key2", "val2")
@@ -181,6 +190,7 @@ func TestHandler(t *testing.T) {
 		{
 			Opts: &tint.Options{
 				ReplaceAttr: replace(slog.IntValue(42), slog.TimeKey),
+				NoColor:     true,
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
@@ -190,6 +200,7 @@ func TestHandler(t *testing.T) {
 		{
 			Opts: &tint.Options{
 				ReplaceAttr: replace(slog.StringValue("INFO"), slog.LevelKey),
+				NoColor:     true,
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
@@ -199,6 +210,7 @@ func TestHandler(t *testing.T) {
 		{
 			Opts: &tint.Options{
 				ReplaceAttr: replace(slog.IntValue(42), slog.MessageKey),
+				NoColor:     true,
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
@@ -208,6 +220,7 @@ func TestHandler(t *testing.T) {
 		{
 			Opts: &tint.Options{
 				ReplaceAttr: replace(slog.IntValue(42), "key"),
+				NoColor:     true,
 			},
 			F: func(l *slog.Logger) {
 				l.With("key", "val").Info("test", "key2", "val2")
@@ -219,6 +232,7 @@ func TestHandler(t *testing.T) {
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 					return slog.Attr{}
 				},
+				NoColor: true,
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
@@ -252,7 +266,8 @@ func TestHandler(t *testing.T) {
 		},
 		{
 			Opts: &tint.Options{
-				Level: slog.LevelDebug - 1,
+				Level:   slog.LevelDebug - 1,
+				NoColor: true,
 			},
 			F: func(l *slog.Logger) {
 				l.Log(context.TODO(), slog.LevelDebug-1, "test")
@@ -279,6 +294,7 @@ func TestHandler(t *testing.T) {
 					}
 					return a
 				},
+				NoColor: true,
 			},
 			F: func(l *slog.Logger) {
 				l.Error("test")
@@ -296,6 +312,7 @@ func TestHandler(t *testing.T) {
 			Opts: &tint.Options{
 				ReplaceAttr: drop(slog.TimeKey, slog.LevelKey, slog.MessageKey, slog.SourceKey),
 				AddSource:   true,
+				NoColor:     true,
 			},
 			F: func(l *slog.Logger) {
 				l.WithGroup("group").Info("test", "key", "val")
@@ -310,6 +327,7 @@ func TestHandler(t *testing.T) {
 					}
 					return a
 				},
+				NoColor: true,
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test")
@@ -322,11 +340,12 @@ func TestHandler(t *testing.T) {
 				ReplaceAttr: func(g []string, a slog.Attr) slog.Attr {
 					return a
 				},
+				NoColor: true,
 			},
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:327 test`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:346 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {
@@ -343,6 +362,42 @@ func TestHandler(t *testing.T) {
 				}{A: 123})
 			},
 			Want: `Nov 10 23:00:00.000 INF test key="{A:123 B:<nil>}"`,
+		},
+		{ // https://github.com/lmittmann/tint/issues/59
+			Opts: &tint.Options{
+				NoColor: false,
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "color", "\033[92mgreen\033[0m")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\033[92mgreen\033[0m",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "color", "\033[92mgreen quoted\033[0m")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\"\033[92mgreen quoted\033[0m\"",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: true,
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "color", "\033[92mgreen\033[0m")
+			},
+			Want: `Nov 10 23:00:00.000 INF test color=green`,
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: true,
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "color", "\033[92mgreen quoted\033[0m")
+			},
+			Want: `Nov 10 23:00:00.000 INF test color="green quoted"`,
 		},
 		{ // https://github.com/lmittmann/tint/pull/66
 			F: func(l *slog.Logger) {
@@ -371,9 +426,8 @@ func TestHandler(t *testing.T) {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			var buf bytes.Buffer
 			if test.Opts == nil {
-				test.Opts = &tint.Options{}
+				test.Opts = &tint.Options{NoColor: true}
 			}
-			test.Opts.NoColor = true
 			l := slog.New(tint.NewHandler(&buf, test.Opts))
 			test.F(l)
 
