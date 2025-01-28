@@ -407,6 +407,13 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 ERR test error=fail`,
 		},
+		{ // https://github.com/lmittmann/tint/issues/85
+			F: func(l *slog.Logger) {
+				var t *time.Time
+				l.Info("test", "time", t)
+			},
+			Want: `Nov 10 23:00:00.000 INF test time=<nil>`,
+		},
 	}
 
 	for i, test := range tests {
