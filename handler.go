@@ -393,7 +393,7 @@ func (h *handler) appendSource(buf *buffer, src *slog.Source) {
 }
 
 func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, groups []string) {
-	if colorAttr, ok := containsTintColor(attr.Value); ok {
+	if colorAttr, ok := resolveTintColor(attr.Value); ok {
 		h.appendTintColor(buf, colorAttr, attr.Key, groupsPrefix)
 		buf.WriteByte(' ')
 		return
@@ -401,7 +401,7 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 	attr.Value = attr.Value.Resolve()
 	if rep := h.replaceAttr; rep != nil && attr.Value.Kind() != slog.KindGroup {
 		attr = rep(groups, attr)
-		if colorAttr, ok := containsTintColor(attr.Value); ok {
+		if colorAttr, ok := resolveTintColor(attr.Value); ok {
 			h.appendTintColor(buf, colorAttr, attr.Key, groupsPrefix)
 			buf.WriteByte(' ')
 			return
@@ -536,7 +536,7 @@ func (h *handler) appendTintColorTime(buf *buffer, colorAttr tintColor) {
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func containsTintColor(v slog.Value) (tintColor, bool) {
+func resolveTintColor(v slog.Value) (tintColor, bool) {
 	for i := 0; i < 100; i++ {
 		if colorAttr, ok := v.Any().(tintColor); ok {
 			return colorAttr, true
