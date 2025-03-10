@@ -392,18 +392,14 @@ func (h *handler) appendSource(buf *buffer, src *slog.Source) {
 }
 
 func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, groups []string) {
-	if colorAttr, ok := resolveTintColor(attr.Value); ok {
-		h.appendTintColor(buf, colorAttr, attr.Key, groupsPrefix)
-		buf.WriteByte(' ')
-		return
-	}
+	color, hasColor := getColor(attr.Value)
 	attr.Value = attr.Value.Resolve()
 	if rep := h.replaceAttr; rep != nil && attr.Value.Kind() != slog.KindGroup {
 		attr = rep(groups, attr)
-		if colorAttr, ok := resolveTintColor(attr.Value); ok {
-			h.appendTintColor(buf, colorAttr, attr.Key, groupsPrefix)
-			buf.WriteByte(' ')
-			return
+		repColor, hasRepColor := getColor(attr.Value)
+		if hasRepColor {
+			color = repColor
+			hasColor = true
 		}
 		attr.Value = attr.Value.Resolve()
 	}
@@ -419,11 +415,21 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 			groups = append(groups, attr.Key)
 		}
 		for _, groupAttr := range attr.Value.Group() {
+			subColor, hasSubColor := getColor(groupAttr.Value)
+			if hasSubColor {
+				groupAttr = ColorAttr(subColor, groupAttr)
+			} else if hasColor {
+				groupAttr = ColorAttr(color, groupAttr)
+			}
 			h.appendAttr(buf, groupAttr, groupsPrefix, groups)
 		}
 		return
 	}
-
+	if hasColor {
+		h.appendTintColor(buf, color, attr, groupsPrefix)
+		buf.WriteByte(' ')
+		return
+	}
 	h.appendKey(buf, attr.Key, groupsPrefix)
 	h.appendValue(buf, attr.Value, true, !h.noColor)
 	buf.WriteByte(' ')
@@ -488,30 +494,30 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool, color bool)
 	}
 }
 
-func (h *handler) appendTintColor(buf *buffer, colorAttr tintColor, attrKey string, groupsPrefix string) {
-	buf.WriteStringIf(!h.noColor, colorAttr.color.faintAnsi())
-	appendString(buf, groupsPrefix+attrKey, true, !h.noColor)
+func (h *handler) appendTintColor(buf *buffer, color Color, attr slog.Attr, groupsPrefix string) {
+	buf.WriteStringIf(!h.noColor, color.faintAnsi())
+	appendString(buf, groupsPrefix+attr.Key, true, !h.noColor)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
-	h.appendValue(buf, colorAttr.LogValue().Resolve(), true, false)
+	h.appendValue(buf, attr.Value, true, false)
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func (h *handler) appendTintColorValue(buf *buffer, colorAttr tintColor) {
-	buf.WriteStringIf(!h.noColor, colorAttr.color.ansi())
-	h.appendValue(buf, colorAttr.LogValue().Resolve(), true, false)
+func (h *handler) appendTintColorValue(buf *buffer, tColor tintColor) {
+	buf.WriteStringIf(!h.noColor, tColor.color.ansi())
+	h.appendValue(buf, tColor.LogValue().Resolve(), true, false)
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func (h *handler) appendTintColorFaintValue(buf *buffer, colorAttr tintColor) {
-	buf.WriteStringIf(!h.noColor, colorAttr.color.faintAnsi())
-	h.appendValue(buf, colorAttr.LogValue().Resolve(), true, false)
+func (h *handler) appendTintColorFaintValue(buf *buffer, tColor tintColor) {
+	buf.WriteStringIf(!h.noColor, tColor.color.faintAnsi())
+	h.appendValue(buf, tColor.LogValue().Resolve(), true, false)
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func (h *handler) appendTintColorTime(buf *buffer, colorAttr tintColor) {
-	buf.WriteStringIf(!h.noColor, colorAttr.color.faintAnsi())
-	value := colorAttr.LogValue().Resolve()
+func (h *handler) appendTintColorTime(buf *buffer, tColor tintColor) {
+	buf.WriteStringIf(!h.noColor, tColor.color.faintAnsi())
+	value := tColor.LogValue().Resolve()
 	if value.Kind() == slog.KindTime {
 		h.appendTime(buf, value.Time(), false)
 	} else {
@@ -520,17 +526,17 @@ func (h *handler) appendTintColorTime(buf *buffer, colorAttr tintColor) {
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func resolveTintColor(v slog.Value) (tintColor, bool) {
+func getColor(v slog.Value) (Color, bool) {
 	for i := 0; i < 100; i++ {
 		if colorAttr, ok := v.Any().(tintColor); ok {
-			return colorAttr, true
+			return colorAttr.color, true
 		}
 		if v.Kind() != slog.KindLogValuer {
-			return tintColor{}, false
+			return 0, false
 		}
 		v = v.LogValuer().LogValue()
 	}
-	return tintColor{}, false
+	return 0, false
 }
 
 func appendString(buf *buffer, s string, quote, color bool) {
