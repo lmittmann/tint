@@ -120,13 +120,12 @@ import (
 
 // ANSI modes
 const (
-	ansiReset          = "\u001b[0m"
-	ansiFaint          = "\u001b[2m"
-	ansiResetFaint     = "\u001b[22m"
-	ansiBrightRed      = "\u001b[91m"
-	ansiBrightGreen    = "\u001b[92m"
-	ansiBrightYellow   = "\u001b[93m"
-	ansiBrightRedFaint = "\u001b[91;2m"
+	ansiReset        = "\u001b[0m"
+	ansiFaint        = "\u001b[2m"
+	ansiResetFaint   = "\u001b[22m"
+	ansiBrightRed    = "\u001b[91m"
+	ansiBrightGreen  = "\u001b[92m"
+	ansiBrightYellow = "\u001b[93m"
 
 	ansiEsc = '\u001b'
 )
@@ -414,12 +413,6 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 	}
 
 	switch attr.Value.Kind() {
-	case slog.KindAny:
-		if err, ok := attr.Value.Any().(tintError); ok {
-			h.appendTintError(buf, err, attr.Key, groupsPrefix)
-			buf.WriteByte(' ')
-			return
-		}
 	case slog.KindGroup:
 		if attr.Key != "" {
 			groupsPrefix += attr.Key + "."
@@ -493,15 +486,6 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool, color bool)
 			appendString(buf, fmt.Sprintf("%+v", cv), quote, color)
 		}
 	}
-}
-
-func (h *handler) appendTintError(buf *buffer, err tintError, attrKey, groupsPrefix string) {
-	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
-	appendString(buf, groupsPrefix+attrKey, true, !h.noColor)
-	buf.WriteByte('=')
-	buf.WriteStringIf(!h.noColor, ansiResetFaint)
-	appendString(buf, err.Error(), true, !h.noColor)
-	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
 func (h *handler) appendTintColor(buf *buffer, colorAttr tintColor, attrKey string, groupsPrefix string) {
@@ -721,15 +705,13 @@ var safeSet = [utf8.RuneSelf]bool{
 	'\u001b': true,
 }
 
-type tintError struct{ error }
-
 // Err returns a tinted (colorized) [slog.Attr] that will be written in red color
 // by the [tint.Handler]. When used with any other [slog.Handler], it behaves as
 //
 //	slog.Any("err", err)
 func Err(err error) slog.Attr {
 	if err != nil {
-		err = tintError{err}
+		return ColorAttr(ColorRed, slog.Any(errKey, err))
 	}
 	return slog.Any(errKey, err)
 }
