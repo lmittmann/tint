@@ -415,10 +415,8 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 			groups = append(groups, attr.Key)
 		}
 		for _, groupAttr := range attr.Value.Group() {
-			subColor, hasSubColor := getColor(groupAttr.Value)
-			if hasSubColor {
-				groupAttr = ColorAttr(subColor, groupAttr)
-			} else if hasColor {
+			_, hasSubColor := getColor(groupAttr.Value)
+			if hasColor && !hasSubColor {
 				groupAttr = ColorAttr(color, groupAttr)
 			}
 			h.appendAttr(buf, groupAttr, groupsPrefix, groups)
