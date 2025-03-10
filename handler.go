@@ -42,6 +42,37 @@ Create a new logger that writes all errors in red:
 		}),
 	)
 
+Create a new logger that writes DBG in magenta:
+
+	w := os.Stderr
+	logger := slog.New(
+		tint.NewHandler(w, &tint.Options{
+			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+				if len(groups) == 0 && attr.Key == slog.LevelKey {
+					level, _ := a.Value.Any().(slog.Level)
+					if level <= slog.LevelDebug {
+						return tint.ColorAttr(tint.ColorMagenta, a)
+					}
+				}
+				return a
+			},
+		}),
+	)
+
+Create a new logger that writes an attribute in a specific color:
+
+	w := os.Stderr
+	logger := slog.New(
+		tint.NewHandler(w, &tint.Options{
+			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+				if len(groups) == 0 && a.Key == "myKey" {
+					return tint.ColorAttr(tint.ColorGreen, a)
+				}
+				return a
+			},
+		}),
+	)
+
 # Automatically Enable Colors
 
 Colors are enabled by default and can be disabled using the Options.NoColor
@@ -201,10 +232,12 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 			h.appendTime(buf, r.Time)
 			buf.WriteByte(' ')
 		} else if a := rep(nil /* groups */, slog.Time(slog.TimeKey, val)); a.Key != "" {
-			if a.Value.Kind() == slog.KindTime {
+			if colorAttr, ok := a.Value.Any().(tintColor); ok {
+				h.appendTintColorTime(buf, colorAttr)
+			} else if a.Value.Kind() == slog.KindTime {
 				h.appendTime(buf, a.Value.Time())
 			} else {
-				h.appendValue(buf, a.Value, false)
+				h.appendValue(buf, a.Value, false, !h.noColor)
 			}
 			buf.WriteByte(' ')
 		}
@@ -212,10 +245,14 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 
 	// write level
 	if rep == nil {
-		h.appendLevel(buf, r.Level)
+		h.appendLevel(buf, r.Level, !h.noColor)
 		buf.WriteByte(' ')
 	} else if a := rep(nil /* groups */, slog.Any(slog.LevelKey, r.Level)); a.Key != "" {
-		h.appendValue(buf, a.Value, false)
+		if colorAttr, ok := a.Value.Any().(tintColor); ok {
+			h.appendTintColorValue(buf, colorAttr)
+		} else {
+			h.appendValue(buf, a.Value, false, !h.noColor)
+		}
 		buf.WriteByte(' ')
 	}
 
@@ -234,7 +271,11 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 				h.appendSource(buf, src)
 				buf.WriteByte(' ')
 			} else if a := rep(nil /* groups */, slog.Any(slog.SourceKey, src)); a.Key != "" {
-				h.appendValue(buf, a.Value, false)
+				if colorAttr, ok := a.Value.Any().(tintColor); ok {
+					h.appendTintColorFaintValue(buf, colorAttr)
+				} else {
+					h.appendValue(buf, a.Value, false, !h.noColor)
+				}
 				buf.WriteByte(' ')
 			}
 		}
@@ -245,7 +286,11 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		buf.WriteString(r.Message)
 		buf.WriteByte(' ')
 	} else if a := rep(nil /* groups */, slog.String(slog.MessageKey, r.Message)); a.Key != "" {
-		h.appendValue(buf, a.Value, false)
+		if colorAttr, ok := a.Value.Any().(tintColor); ok {
+			h.appendTintColorValue(buf, colorAttr)
+		} else {
+			h.appendValue(buf, a.Value, true, !h.noColor)
+		}
 		buf.WriteByte(' ')
 	}
 
@@ -305,26 +350,26 @@ func (h *handler) appendTime(buf *buffer, t time.Time) {
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func (h *handler) appendLevel(buf *buffer, level slog.Level) {
+func (h *handler) appendLevel(buf *buffer, level slog.Level, color bool) {
 	switch {
 	case level < slog.LevelInfo:
 		buf.WriteString("DBG")
 		appendLevelDelta(buf, level-slog.LevelDebug)
 	case level < slog.LevelWarn:
-		buf.WriteStringIf(!h.noColor, ansiBrightGreen)
+		buf.WriteStringIf(color, ansiBrightGreen)
 		buf.WriteString("INF")
 		appendLevelDelta(buf, level-slog.LevelInfo)
-		buf.WriteStringIf(!h.noColor, ansiReset)
+		buf.WriteStringIf(color, ansiReset)
 	case level < slog.LevelError:
-		buf.WriteStringIf(!h.noColor, ansiBrightYellow)
+		buf.WriteStringIf(color, ansiBrightYellow)
 		buf.WriteString("WRN")
 		appendLevelDelta(buf, level-slog.LevelWarn)
-		buf.WriteStringIf(!h.noColor, ansiReset)
+		buf.WriteStringIf(color, ansiReset)
 	default:
-		buf.WriteStringIf(!h.noColor, ansiBrightRed)
+		buf.WriteStringIf(color, ansiBrightRed)
 		buf.WriteString("ERR")
 		appendLevelDelta(buf, level-slog.LevelError)
-		buf.WriteStringIf(!h.noColor, ansiReset)
+		buf.WriteStringIf(color, ansiReset)
 	}
 }
 
@@ -348,9 +393,19 @@ func (h *handler) appendSource(buf *buffer, src *slog.Source) {
 }
 
 func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, groups []string) {
+	if colorAttr, ok := containsTintColor(attr.Value); ok {
+		h.appendTintColor(buf, colorAttr, attr.Key, groupsPrefix)
+		buf.WriteByte(' ')
+		return
+	}
 	attr.Value = attr.Value.Resolve()
 	if rep := h.replaceAttr; rep != nil && attr.Value.Kind() != slog.KindGroup {
 		attr = rep(groups, attr)
+		if colorAttr, ok := containsTintColor(attr.Value); ok {
+			h.appendTintColor(buf, colorAttr, attr.Key, groupsPrefix)
+			buf.WriteByte(' ')
+			return
+		}
 		attr.Value = attr.Value.Resolve()
 	}
 
@@ -377,7 +432,7 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 	}
 
 	h.appendKey(buf, attr.Key, groupsPrefix)
-	h.appendValue(buf, attr.Value, true)
+	h.appendValue(buf, attr.Value, true, !h.noColor)
 	buf.WriteByte(' ')
 }
 
@@ -388,10 +443,10 @@ func (h *handler) appendKey(buf *buffer, key, groups string) {
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
+func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool, color bool) {
 	switch v.Kind() {
 	case slog.KindString:
-		appendString(buf, v.String(), quote, !h.noColor)
+		appendString(buf, v.String(), quote, color)
 	case slog.KindInt64:
 		*buf = strconv.AppendInt(*buf, v.Int64(), 10)
 	case slog.KindUint64:
@@ -401,9 +456,9 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	case slog.KindBool:
 		*buf = strconv.AppendBool(*buf, v.Bool())
 	case slog.KindDuration:
-		appendString(buf, v.Duration().String(), quote, !h.noColor)
+		appendString(buf, v.Duration().String(), quote, color)
 	case slog.KindTime:
-		appendString(buf, v.Time().String(), quote, !h.noColor)
+		appendString(buf, v.Time().String(), quote, color)
 	case slog.KindAny:
 		defer func() {
 			// Copied from log/slog/handler.go.
@@ -419,23 +474,23 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 				}
 
 				// Otherwise just print the original panic message.
-				appendString(buf, fmt.Sprintf("!PANIC: %v", r), true, !h.noColor)
+				appendString(buf, fmt.Sprintf("!PANIC: %v", r), true, color)
 			}
 		}()
 
 		switch cv := v.Any().(type) {
 		case slog.Level:
-			h.appendLevel(buf, cv)
+			h.appendLevel(buf, cv, color)
 		case encoding.TextMarshaler:
 			data, err := cv.MarshalText()
 			if err != nil {
 				break
 			}
-			appendString(buf, string(data), quote, !h.noColor)
+			appendString(buf, string(data), quote, color)
 		case *slog.Source:
 			h.appendSource(buf, cv)
 		default:
-			appendString(buf, fmt.Sprintf("%+v", cv), quote, !h.noColor)
+			appendString(buf, fmt.Sprintf("%+v", cv), quote, color)
 		}
 	}
 }
@@ -447,6 +502,51 @@ func (h *handler) appendTintError(buf *buffer, err tintError, attrKey, groupsPre
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
 	appendString(buf, err.Error(), true, !h.noColor)
 	buf.WriteStringIf(!h.noColor, ansiReset)
+}
+
+func (h *handler) appendTintColor(buf *buffer, colorAttr tintColor, attrKey string, groupsPrefix string) {
+	buf.WriteStringIf(!h.noColor, colorAttr.color.faintAnsi())
+	appendString(buf, groupsPrefix+attrKey, true, !h.noColor)
+	buf.WriteByte('=')
+	buf.WriteStringIf(!h.noColor, ansiResetFaint)
+	h.appendValue(buf, colorAttr.LogValue().Resolve(), true, false)
+	buf.WriteStringIf(!h.noColor, ansiReset)
+}
+
+func (h *handler) appendTintColorValue(buf *buffer, colorAttr tintColor) {
+	buf.WriteStringIf(!h.noColor, colorAttr.color.ansi())
+	h.appendValue(buf, colorAttr.LogValue().Resolve(), true, false)
+	buf.WriteStringIf(!h.noColor, ansiReset)
+}
+
+func (h *handler) appendTintColorFaintValue(buf *buffer, colorAttr tintColor) {
+	buf.WriteStringIf(!h.noColor, colorAttr.color.faintAnsi())
+	h.appendValue(buf, colorAttr.LogValue().Resolve(), true, false)
+	buf.WriteStringIf(!h.noColor, ansiReset)
+}
+
+func (h *handler) appendTintColorTime(buf *buffer, colorAttr tintColor) {
+	buf.WriteStringIf(!h.noColor, colorAttr.color.faintAnsi())
+	value := colorAttr.LogValue().Resolve()
+	if value.Kind() == slog.KindTime {
+		h.appendTime(buf, value.Time())
+	} else {
+		h.appendValue(buf, value, false, false)
+	}
+	buf.WriteStringIf(!h.noColor, ansiReset)
+}
+
+func containsTintColor(v slog.Value) (tintColor, bool) {
+	for i := 0; i < 100; i++ {
+		if colorAttr, ok := v.Any().(tintColor); ok {
+			return colorAttr, true
+		}
+		if v.Kind() != slog.KindLogValuer {
+			return tintColor{}, false
+		}
+		v = v.LogValuer().LogValue()
+	}
+	return tintColor{}, false
 }
 
 func appendString(buf *buffer, s string, quote, color bool) {
@@ -632,4 +732,68 @@ func Err(err error) slog.Attr {
 		err = tintError{err}
 	}
 	return slog.Any(errKey, err)
+}
+
+type Color uint16
+
+func (m Color) ansi() string {
+	return "\u001b[" + strconv.Itoa(int(m)) + "m"
+}
+
+func (m Color) faintAnsi() string {
+	return "\u001b[" + strconv.Itoa(int(m)) + ";2m"
+}
+
+func (m Color) String() string {
+	switch m {
+	case ColorBlack:
+		return "Black"
+	case ColorRed:
+		return "Red"
+	case ColorGreen:
+		return "Green"
+	case ColorYellow:
+		return "Yellow"
+	case ColorBlue:
+		return "Blue"
+	case ColorMagenta:
+		return "Magenta"
+	case ColorCyan:
+		return "Cyan"
+	case ColorWhite:
+		return "White"
+	default:
+		return "InvalidColor(" + strconv.Itoa(int(m)) + ")"
+	}
+}
+
+const (
+	ColorBlack Color = iota + 90
+	ColorRed
+	ColorGreen
+	ColorYellow
+	ColorBlue
+	ColorMagenta
+	ColorCyan
+	ColorWhite
+)
+
+type tintColor struct {
+	color Color
+	val   slog.Value
+}
+
+func (t tintColor) LogValue() slog.Value {
+	return t.val
+}
+
+// ColorAttr returns a tinted (colorized) [slog.Attr] that will be written in the
+// specified color by the [tint.Handler]. When used with any other [slog.Handler],
+// it behaves as the original [slog.Attr].
+func ColorAttr(color Color, attr slog.Attr) slog.Attr {
+	if 90 <= color && color <= 97 {
+		return slog.Any(attr.Key, tintColor{color: color, val: attr.Value})
+	}
+	// ignore unsupported modes
+	return attr
 }
