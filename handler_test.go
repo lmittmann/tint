@@ -31,7 +31,7 @@ func Example() {
 				if level < slog.LevelDebug {
 					levelStr := "TRC"
 					if level != levelTrace {
-						levelStr += fmt.Sprintf("+%d", int(level-levelTrace))
+						levelStr += fmt.Sprintf("%+d", int(level-levelTrace))
 					}
 					return tint.ColorAttr(tint.ColorMagenta, slog.String(slog.LevelKey, levelStr))
 				}
