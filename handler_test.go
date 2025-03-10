@@ -45,10 +45,6 @@ func Example() {
 	slog.Warn("Slow request", "method", "GET", "path", "/users", "duration", 497*time.Millisecond)
 	slog.Log(context.Background(), levelTrace, "request", "method", "GET", "path", "/users", "trace", "123")
 	slog.Error("DB connection lost", tint.Err(errors.New("connection reset")), "db", "myapp")
-	slog.Info("Server stopped",
-		slog.Group("group", tint.ColorAttr(tint.ColorGreen, slog.String("reason", "shutdown")), "code", 0),
-		tint.ColorAttr(tint.ColorRed, slog.Group("2ndGroup", "reason", "panic", "code", 1, tint.ColorAttr(tint.ColorGreen, slog.String("reason", "shutdown")))),
-	)
 	// Output:
 }
 
