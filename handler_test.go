@@ -20,6 +20,7 @@ import (
 var faketime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 
 func Example() {
+
 	const levelTrace = slog.LevelDebug - 4
 
 	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{
