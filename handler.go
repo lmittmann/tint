@@ -229,13 +229,13 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	if !r.Time.IsZero() {
 		val := r.Time.Round(0) // strip monotonic to match Attr behavior
 		if rep == nil {
-			h.appendTime(buf, r.Time)
+			h.appendTime(buf, r.Time, !h.noColor)
 			buf.WriteByte(' ')
 		} else if a := rep(nil /* groups */, slog.Time(slog.TimeKey, val)); a.Key != "" {
 			if colorAttr, ok := a.Value.Any().(tintColor); ok {
 				h.appendTintColorTime(buf, colorAttr)
 			} else if a.Value.Kind() == slog.KindTime {
-				h.appendTime(buf, a.Value.Time())
+				h.appendTime(buf, a.Value.Time(), !h.noColor)
 			} else {
 				h.appendValue(buf, a.Value, false, !h.noColor)
 			}
@@ -344,10 +344,10 @@ func (h *handler) WithGroup(name string) slog.Handler {
 	return h2
 }
 
-func (h *handler) appendTime(buf *buffer, t time.Time) {
-	buf.WriteStringIf(!h.noColor, ansiFaint)
+func (h *handler) appendTime(buf *buffer, t time.Time, color bool) {
+	buf.WriteStringIf(color, ansiFaint)
 	*buf = t.AppendFormat(*buf, h.timeFormat)
-	buf.WriteStringIf(!h.noColor, ansiReset)
+	buf.WriteStringIf(color, ansiReset)
 }
 
 func (h *handler) appendLevel(buf *buffer, level slog.Level, color bool) {
@@ -529,7 +529,7 @@ func (h *handler) appendTintColorTime(buf *buffer, colorAttr tintColor) {
 	buf.WriteStringIf(!h.noColor, colorAttr.color.faintAnsi())
 	value := colorAttr.LogValue().Resolve()
 	if value.Kind() == slog.KindTime {
-		h.appendTime(buf, value.Time())
+		h.appendTime(buf, value.Time(), false)
 	} else {
 		h.appendValue(buf, value, false, false)
 	}
