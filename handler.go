@@ -231,10 +231,10 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 			h.appendTime(buf, r.Time, !h.noColor)
 			buf.WriteByte(' ')
 		} else if a := rep(nil /* groups */, slog.Time(slog.TimeKey, val)); a.Key != "" {
-			if colorAttr, ok := a.Value.Any().(tintColor); ok {
-				h.appendTintColorTime(buf, colorAttr)
-			} else if a.Value.Kind() == slog.KindTime {
+			if a.Value.Kind() == slog.KindTime {
 				h.appendTime(buf, a.Value.Time(), !h.noColor)
+			} else if colorAttr, ok := a.Value.Any().(tintColor); ok {
+				h.appendTintColorTime(buf, colorAttr)
 			} else {
 				h.appendValue(buf, a.Value, false, !h.noColor)
 			}
