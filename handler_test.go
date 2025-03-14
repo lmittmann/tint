@@ -33,14 +33,14 @@ func Example() {
 					if level != levelTrace {
 						levelStr += fmt.Sprintf("%+d", int(level-levelTrace))
 					}
-					return tint.ColorAttr(tint.ColorMagenta, slog.String(slog.LevelKey, levelStr))
+					return tint.ColorAttr(tint.BrightMagentaColor, slog.String(slog.LevelKey, levelStr))
 				}
 			}
 			return attr
 		},
 	})))
 
-	slog.Info("Starting server", "addr", ":8080", tint.ColorAttr(tint.ColorCyan, slog.String("env", "production")))
+	slog.Info("Starting server", "addr", ":8080", tint.ColorAttr(tint.BrightCyanColor, slog.String("env", "production")))
 	slog.Debug("Connected to DB", "db", "myapp", "host", "localhost:5432")
 	slog.Warn("Slow request", "method", "GET", "path", "/users", "duration", 497*time.Millisecond)
 	slog.Log(context.Background(), levelTrace, "request", "method", "GET", "path", "/users", "trace", "123")

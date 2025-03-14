@@ -51,7 +51,7 @@ Create a new logger that writes DBG in magenta:
 				if len(groups) == 0 && attr.Key == slog.LevelKey {
 					level, _ := a.Value.Any().(slog.Level)
 					if level <= slog.LevelDebug {
-						return tint.ColorAttr(tint.ColorMagenta, a)
+						return tint.ColorAttr(tint.BrightMagentaColor, a)
 					}
 				}
 				return a
@@ -66,7 +66,7 @@ Create a new logger that writes an attribute in a specific color:
 		tint.NewHandler(w, &tint.Options{
 			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 				if len(groups) == 0 && a.Key == "myKey" {
-					return tint.ColorAttr(tint.ColorGreen, a)
+					return tint.ColorAttr(tint.BrightGreenColor, a)
 				}
 				return a
 			},
@@ -392,16 +392,10 @@ func (h *handler) appendSource(buf *buffer, src *slog.Source) {
 }
 
 func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, groups []string) {
-	color, hasColor := getColor(attr.Value)
-	attr.Value = attr.Value.Resolve()
+	attr.Value = resolveValueWithColor(attr.Value)
 	if rep := h.replaceAttr; rep != nil && attr.Value.Kind() != slog.KindGroup {
 		attr = rep(groups, attr)
-		repColor, hasRepColor := getColor(attr.Value)
-		if hasRepColor {
-			color = repColor
-			hasColor = true
-		}
-		attr.Value = attr.Value.Resolve()
+		attr.Value = resolveValueWithColor(attr.Value)
 	}
 
 	if attr.Equal(slog.Attr{}) {
@@ -409,23 +403,19 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 	}
 
 	switch attr.Value.Kind() {
+	case slog.KindLogValuer:
+		if tColor, ok := attr.Value.Any().(tintColor); ok {
+			h.appendTintColorAttr(buf, attr.Key, tColor, groupsPrefix, groups)
+			return
+		}
 	case slog.KindGroup:
 		if attr.Key != "" {
 			groupsPrefix += attr.Key + "."
 			groups = append(groups, attr.Key)
 		}
 		for _, groupAttr := range attr.Value.Group() {
-			_, hasSubColor := getColor(groupAttr.Value)
-			if hasColor && !hasSubColor {
-				groupAttr = ColorAttr(color, groupAttr)
-			}
 			h.appendAttr(buf, groupAttr, groupsPrefix, groups)
 		}
-		return
-	}
-	if hasColor {
-		h.appendTintColor(buf, color, attr, groupsPrefix)
-		buf.WriteByte(' ')
 		return
 	}
 	h.appendKey(buf, attr.Key, groupsPrefix)
@@ -492,49 +482,102 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool, color bool)
 	}
 }
 
-func (h *handler) appendTintColor(buf *buffer, color Color, attr slog.Attr, groupsPrefix string) {
-	buf.WriteStringIf(!h.noColor, color.faintAnsi())
-	appendString(buf, groupsPrefix+attr.Key, true, !h.noColor)
+func (h *handler) appendTintColorAttr(buf *buffer, key string, tColor tintColor, groupsPrefix string, groups []string) {
+	switch tColor.val.Kind() {
+	case slog.KindGroup:
+		if key != "" {
+			groupsPrefix += key + "."
+			groups = append(groups, key)
+		}
+		for _, groupAttr := range tColor.val.Group() {
+			h.appendAttr(buf, ColorAttr(tColor.color, groupAttr), groupsPrefix, groups)
+		}
+		return
+	}
+	h.appendTintColor(buf, key, tColor, groupsPrefix)
+	buf.WriteByte(' ')
+}
+
+func (h *handler) appendTintColor(buf *buffer, key string, tColor tintColor, groupsPrefix string) {
+	buf.WriteStringIf(!h.noColor, tColor.color.faintAnsi())
+	appendString(buf, groupsPrefix+key, true, !h.noColor)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
-	h.appendValue(buf, attr.Value, true, false)
+	h.appendValue(buf, tColor.val, true, false)
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
 func (h *handler) appendTintColorValue(buf *buffer, tColor tintColor) {
 	buf.WriteStringIf(!h.noColor, tColor.color.ansi())
-	h.appendValue(buf, tColor.LogValue().Resolve(), true, false)
+	h.appendValue(buf, tColor.val, true, false)
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
 func (h *handler) appendTintColorFaintValue(buf *buffer, tColor tintColor) {
 	buf.WriteStringIf(!h.noColor, tColor.color.faintAnsi())
-	h.appendValue(buf, tColor.LogValue().Resolve(), true, false)
+	h.appendValue(buf, tColor.val, true, false)
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
 func (h *handler) appendTintColorTime(buf *buffer, tColor tintColor) {
 	buf.WriteStringIf(!h.noColor, tColor.color.faintAnsi())
-	value := tColor.LogValue().Resolve()
-	if value.Kind() == slog.KindTime {
-		h.appendTime(buf, value.Time(), false)
+	if tColor.val.Kind() == slog.KindTime {
+		h.appendTime(buf, tColor.val.Time(), false)
 	} else {
-		h.appendValue(buf, value, false, false)
+		h.appendValue(buf, tColor.val, false, false)
 	}
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func getColor(v slog.Value) (Color, bool) {
-	for i := 0; i < 100; i++ {
-		if colorAttr, ok := v.Any().(tintColor); ok {
-			return colorAttr.color, true
+func resolveValueWithColor(v slog.Value) (rv slog.Value) {
+	var c Color
+	// copied from log/slog/value.go and added color support
+	orig := v
+	defer func() {
+		if r := recover(); r != nil {
+			rv = slog.AnyValue(fmt.Errorf("LogValue panicked\n%s", stack(3, 5)))
 		}
+	}()
+	const maxLogValues = 100
+	for i := 0; i < maxLogValues; i++ {
 		if v.Kind() != slog.KindLogValuer {
-			return 0, false
+			if c != 0 {
+				return slog.AnyValue(tintColor{color: c, val: v})
+			}
+			return v
+		} else if colorAttr, ok := v.Any().(tintColor); ok {
+			c = colorAttr.color
+			v = colorAttr.val
+			continue
 		}
 		v = v.LogValuer().LogValue()
 	}
-	return 0, false
+	err := fmt.Errorf("LogValue called too many times on Value of type %T", orig.Any())
+	return slog.AnyValue(err)
+}
+
+func stack(skip, nFrames int) string {
+	pcs := make([]uintptr, nFrames+1)
+	n := runtime.Callers(skip+1, pcs)
+	if n == 0 {
+		return "(no stack)"
+	}
+	frames := runtime.CallersFrames(pcs[:n])
+	var b strings.Builder
+	i := 0
+	for {
+		frame, more := frames.Next()
+		fmt.Fprintf(&b, "called from %s (%s:%d)\n", frame.Function, frame.File, frame.Line)
+		if !more {
+			break
+		}
+		i++
+		if i >= nFrames {
+			fmt.Fprintf(&b, "(rest of stack elided)\n")
+			break
+		}
+	}
+	return b.String()
 }
 
 func appendString(buf *buffer, s string, quote, color bool) {
@@ -715,19 +758,29 @@ var safeSet = [utf8.RuneSelf]bool{
 //	slog.Any("err", err)
 func Err(err error) slog.Attr {
 	if err != nil {
-		return ColorAttr(ColorRed, slog.Any(errKey, err))
+		return ColorAttr(BrightRedColor, slog.Any(errKey, err))
 	}
 	return slog.Any(errKey, err)
 }
 
-type Color uint16
+type Color uint8
+
+func (m Color) ansiCode() string {
+	if m < 8 {
+		return strconv.Itoa(int(m) + 30)
+	}
+	if m < 16 {
+		return strconv.Itoa(int(m) - 8 + 90)
+	}
+	return "38;5;" + strconv.Itoa(int(m))
+}
 
 func (m Color) ansi() string {
-	return "\u001b[" + strconv.Itoa(int(m)) + "m"
+	return "\u001b[" + m.ansiCode() + "m"
 }
 
 func (m Color) faintAnsi() string {
-	return "\u001b[" + strconv.Itoa(int(m)) + ";2m"
+	return "\u001b[2;" + m.ansiCode() + "m"
 }
 
 func (m Color) String() string {
@@ -748,13 +801,29 @@ func (m Color) String() string {
 		return "Cyan"
 	case ColorWhite:
 		return "White"
+	case BrightBlackColor:
+		return "BrightBlack"
+	case BrightRedColor:
+		return "BrightRed"
+	case BrightGreenColor:
+		return "BrightGreen"
+	case BrightYellowColor:
+		return "BrightYellow"
+	case BrightBlueColor:
+		return "BrightBlue"
+	case BrightMagentaColor:
+		return "BrightMagenta"
+	case BrightCyanColor:
+		return "BrightCyan"
+	case BrightWhiteColor:
+		return "BrightWhite"
 	default:
-		return "InvalidColor(" + strconv.Itoa(int(m)) + ")"
+		return "Color(" + strconv.Itoa(int(m)) + ")"
 	}
 }
 
 const (
-	ColorBlack Color = iota + 90
+	ColorBlack Color = iota
 	ColorRed
 	ColorGreen
 	ColorYellow
@@ -762,6 +831,14 @@ const (
 	ColorMagenta
 	ColorCyan
 	ColorWhite
+	BrightBlackColor
+	BrightRedColor
+	BrightGreenColor
+	BrightYellowColor
+	BrightBlueColor
+	BrightMagentaColor
+	BrightCyanColor
+	BrightWhiteColor
 )
 
 type tintColor struct {
@@ -777,9 +854,5 @@ func (t tintColor) LogValue() slog.Value {
 // specified color by the [tint.Handler]. When used with any other [slog.Handler],
 // it behaves as the original [slog.Attr].
 func ColorAttr(color Color, attr slog.Attr) slog.Attr {
-	if 90 <= color && color <= 97 {
-		return slog.Any(attr.Key, tintColor{color: color, val: attr.Value})
-	}
-	// ignore unsupported modes
-	return attr
+	return slog.Any(attr.Key, tintColor{color: color, val: attr.Value})
 }
