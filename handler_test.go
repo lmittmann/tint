@@ -511,6 +511,30 @@ func TestReplaceAttr(t *testing.T) {
 	}
 }
 
+func TestErr(t *testing.T) {
+	t.Run("text", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewTextHandler(&buf, nil))
+		logger.Info("test", tint.Err(errTest))
+
+		want := `time=2009-11-10T23:00:00.000Z level=INFO msg=test err=fail`
+		if got := strings.TrimSpace(buf.String()); want != got {
+			t.Fatalf("(-want +got)\n- %s\n+ %s", want, got)
+		}
+	})
+
+	t.Run("json", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+		logger.Info("test", tint.Err(errTest))
+
+		want := `{"time":"2009-11-10T23:00:00Z","level":"INFO","msg":"test","err":"fail"}`
+		if got := strings.TrimSpace(buf.String()); want != got {
+			t.Fatalf("(-want +got)\n- %s\n+ %s", want, got)
+		}
+	})
+}
+
 // See https://github.com/golang/exp/blob/master/slog/benchmarks/benchmarks_test.go#L25
 //
 // Run e.g.:
