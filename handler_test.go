@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -19,14 +20,30 @@ import (
 var faketime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 
 func Example() {
+	const levelTrace = slog.LevelDebug - 4
+
 	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{
-		Level:      slog.LevelDebug,
+		Level:      levelTrace,
 		TimeFormat: time.Kitchen,
+		ReplaceAttr: func(groups []string, attr slog.Attr) slog.Attr {
+			if len(groups) == 0 && attr.Key == slog.LevelKey {
+				level, _ := attr.Value.Any().(slog.Level)
+				if level < slog.LevelDebug {
+					levelStr := "TRC"
+					if level != levelTrace {
+						levelStr += fmt.Sprintf("%+d", int(level-levelTrace))
+					}
+					return tint.ColorAttr(tint.BrightMagentaColor, slog.String(slog.LevelKey, levelStr))
+				}
+			}
+			return attr
+		},
 	})))
 
-	slog.Info("Starting server", "addr", ":8080", "env", "production")
+	slog.Info("Starting server", "addr", ":8080", tint.ColorAttr(tint.BrightCyanColor, slog.String("env", "production")))
 	slog.Debug("Connected to DB", "db", "myapp", "host", "localhost:5432")
 	slog.Warn("Slow request", "method", "GET", "path", "/users", "duration", 497*time.Millisecond)
+	slog.Log(context.Background(), levelTrace, "request", "method", "GET", "path", "/users", "trace", "123")
 	slog.Error("DB connection lost", tint.Err(errors.New("connection reset")), "db", "myapp")
 	// Output:
 }
@@ -100,7 +117,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:101 test key=val`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:118 test key=val`,
 		},
 		{
 			Opts: &tint.Options{
@@ -345,7 +362,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:346 test`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:363 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {

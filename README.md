@@ -77,6 +77,41 @@ logger := slog.New(
 )
 ```
 
+```go
+// create a new logger that writes DBG in magenta:
+w := os.Stderr
+logger := slog.New(
+    tint.NewHandler(w, &tint.Options{
+        ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+            if len(groups) == 0 && a.Key == slog.LevelKey {
+                level, _ := a.Value.Any().(slog.Level)
+                if level <= slog.LevelDebug {
+                    return tint.ColorAttr(tint.ColorMagenta, a)
+                }
+            }
+            return a
+        },
+    }),
+)
+
+```
+
+```go
+// create a new logger that writes attributes with key "myKey" in green:
+w := os.Stderr
+logger := slog.New(
+    tint.NewHandler(w, &tint.Options{
+        ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+            if len(groups) == 0 && a.Key == "myKey" {
+                return tint.ColorAttr(tint.ColorGreen, a)
+            }
+            return a
+        },
+    }),
+)
+
+```
+
 ### Automatically Enable Colors
 
 Colors are enabled by default and can be disabled using the `Options.NoColor`
