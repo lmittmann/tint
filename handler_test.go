@@ -364,36 +364,28 @@ func TestHandler(t *testing.T) {
 			Want: `Nov 10 23:00:00.000 INF test key="{A:123 B:<nil>}"`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/59
-			Opts: &tint.Options{
-				NoColor: false,
-			},
+			Opts: &tint.Options{NoColor: false},
 			F: func(l *slog.Logger) {
 				l.Info("test", "color", "\033[92mgreen\033[0m")
 			},
 			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\033[92mgreen\033[0m",
 		},
 		{
-			Opts: &tint.Options{
-				NoColor: false,
-			},
+			Opts: &tint.Options{NoColor: false},
 			F: func(l *slog.Logger) {
 				l.Info("test", "color", "\033[92mgreen quoted\033[0m")
 			},
 			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\"\033[92mgreen quoted\033[0m\"",
 		},
 		{
-			Opts: &tint.Options{
-				NoColor: true,
-			},
+			Opts: &tint.Options{NoColor: true},
 			F: func(l *slog.Logger) {
 				l.Info("test", "color", "\033[92mgreen\033[0m")
 			},
 			Want: `Nov 10 23:00:00.000 INF test color=green`,
 		},
 		{
-			Opts: &tint.Options{
-				NoColor: true,
-			},
+			Opts: &tint.Options{NoColor: true},
 			F: func(l *slog.Logger) {
 				l.Info("test", "color", "\033[92mgreen quoted\033[0m")
 			},
@@ -413,6 +405,58 @@ func TestHandler(t *testing.T) {
 				l.Info("test", "time", t)
 			},
 			Want: `Nov 10 23:00:00.000 INF test time=<nil>`,
+		},
+
+		{
+			Opts: &tint.Options{NoColor: false},
+			F: func(l *slog.Logger) {
+				l.Error("test", tint.Err(errors.New("fail")))
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[91mERR\033[0m test \033[2;91merr=\033[22mfail\033[0m",
+		},
+		{
+			Opts: &tint.Options{NoColor: false},
+			F: func(l *slog.Logger) {
+				l.Info("test", tint.String(10, "key", "value"))
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;92mkey=\033[22mvalue\033[0m",
+		},
+		{
+			Opts: &tint.Options{NoColor: false},
+			F: func(l *slog.Logger) {
+				l.Info("test", tint.String(226, "key", "value"))
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;38;5;226mkey=\033[22mvalue\033[0m",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.MessageKey && len(groups) == 0 {
+						return tint.String(10, slog.MessageKey, a.String())
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "value")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[92mtest\033[0m \033[2mkey=\033[22mvalue\033[0m",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.TimeKey && len(groups) == 0 {
+						return tint.Time(10, slog.MessageKey, a.Value.Time())
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "value")
+			},
+			Want: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mkey=\033[22mvalue\033[0m",
 		},
 	}
 
@@ -651,6 +695,14 @@ func BenchmarkLogAttrs(b *testing.B) {
 				)
 			},
 		},
+		{
+			"attr",
+			func(logger *slog.Logger) {
+				logger.LogAttrs(context.TODO(), slog.LevelError, testMessage,
+					tint.Attr(9, slog.String("string", testString)),
+				)
+			},
+		},
 	}
 
 	for _, h := range handler {
@@ -667,6 +719,18 @@ func BenchmarkLogAttrs(b *testing.B) {
 		})
 	}
 }
+
+// func TestTint(t *testing.T) {
+// 	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{
+// 		Level:      slog.LevelDebug,
+// 		TimeFormat: time.Kitchen,
+// 	})))
+
+// 	for i := 0; i < 256; i++ {
+// 		s := strings.Repeat(strconv.Itoa(int(i))+" ", 6)[:11]
+// 		slog.Info("test", tint.Attr(uint8(i), slog.String("color", s)), "nocolor", "123")
+// 	}
+// }
 
 // discarder is a slog.Handler that discards all records.
 type discarder struct{}

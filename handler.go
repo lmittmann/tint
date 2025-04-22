@@ -360,8 +360,8 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 
 	switch attr.Value.Kind() {
 	case slog.KindAny:
-		if err, ok := attr.Value.Any().(tintError); ok {
-			h.appendTintError(buf, err, attr.Key, groupsPrefix)
+		if tintVal, ok := attr.Value.Any().(tintValue); ok {
+			h.appendTintValue(buf, tintVal, attr.Key, groupsPrefix)
 			buf.WriteByte(' ')
 			return
 		}
@@ -440,14 +440,37 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	}
 }
 
-func (h *handler) appendTintError(buf *buffer, err tintError, attrKey, groupsPrefix string) {
-	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
+func ansiCode(m uint8) string {
+	if m < 8 {
+		return strconv.Itoa(int(m) + 30)
+	}
+	if m < 16 {
+		return strconv.Itoa(int(m) - 8 + 90)
+	}
+	return "38;5;" + strconv.Itoa(int(m))
+}
+
+func faintAnsi(m uint8) string {
+	return "\u001b[2;" + ansiCode(m) + "m"
+}
+
+func (h *handler) appendTintValue(buf *buffer, val tintValue, attrKey, groupsPrefix string) {
+	buf.WriteStringIf(!h.noColor, faintAnsi(val.color))
 	appendString(buf, groupsPrefix+attrKey, true, !h.noColor)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
-	appendString(buf, err.Error(), true, !h.noColor)
+	h.appendValue(buf, val.Value, true)
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
+
+// func (h *handler) appendTintError(buf *buffer, err tintError, attrKey, groupsPrefix string) {
+// 	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
+// 	appendString(buf, groupsPrefix+attrKey, true, !h.noColor)
+// 	buf.WriteByte('=')
+// 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
+// 	appendString(buf, err.Error(), true, !h.noColor)
+// 	buf.WriteStringIf(!h.noColor, ansiReset)
+// }
 
 func appendString(buf *buffer, s string, quote, color bool) {
 	if quote && !color {
@@ -621,15 +644,59 @@ var safeSet = [utf8.RuneSelf]bool{
 	'\u001b': true,
 }
 
-type tintError struct{ error }
+type tintValue struct {
+	color uint8
+	slog.Value
+}
 
 // Err returns a tinted (colorized) [slog.Attr] that will be written in red color
 // by the [tint.Handler]. When used with any other [slog.Handler], it behaves as
 //
 //	slog.Any("err", err)
 func Err(err error) slog.Attr {
-	if err != nil {
-		err = tintError{err}
-	}
-	return slog.Any(errKey, err)
+	return Any(9, errKey, err)
+}
+
+func Attr(color uint8, attr slog.Attr) slog.Attr {
+	return slog.Any(attr.Key, tintValue{color: color, Value: attr.Value})
+}
+
+func Any(color uint8, key string, value any) slog.Attr {
+	return slog.Any(key, tintValue{color: color, Value: slog.AnyValue(value)})
+}
+
+func String(color uint8, key, value string) slog.Attr {
+	return slog.Any(key, tintValue{color: color, Value: slog.StringValue(value)})
+}
+
+func Int(color uint8, key string, value int) slog.Attr {
+	return slog.Any(key, tintValue{color: color, Value: slog.IntValue(value)})
+}
+
+func Int64(color uint8, key string, value int64) slog.Attr {
+	return slog.Any(key, tintValue{color: color, Value: slog.Int64Value(value)})
+}
+
+func Uint64(color uint8, key string, value uint64) slog.Attr {
+	return slog.Any(key, tintValue{color: color, Value: slog.Uint64Value(value)})
+}
+
+func Float64(color uint8, key string, value float64) slog.Attr {
+	return slog.Any(key, tintValue{color: color, Value: slog.Float64Value(value)})
+}
+
+func Bool(color uint8, key string, value bool) slog.Attr {
+	return slog.Any(key, tintValue{color: color, Value: slog.BoolValue(value)})
+}
+
+func Duration(color uint8, key string, value time.Duration) slog.Attr {
+	return slog.Any(key, tintValue{color: color, Value: slog.DurationValue(value)})
+}
+
+func Time(color uint8, key string, value time.Time) slog.Attr {
+	return slog.Any(key, tintValue{color: color, Value: slog.TimeValue(value)})
+}
+
+func Group(color uint8, key string, attrs ...slog.Attr) slog.Attr {
+	return slog.Any(key, tintValue{color: color, Value: slog.GroupValue(attrs...)})
 }
