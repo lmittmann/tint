@@ -441,14 +441,14 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "value")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[92mtest\033[0m \033[2mkey=\033[22mvalue\033[0m",
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[92mtest\033[0m \033[2mkey=\033[0mvalue",
 		},
 		{
 			Opts: &tint.Options{
 				NoColor: false,
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 					if a.Key == slog.TimeKey && len(groups) == 0 {
-						return tint.Time(10, slog.MessageKey, a.Value.Time())
+						return tint.Time(10, slog.TimeKey, a.Value.Time())
 					}
 					return a
 				},
@@ -456,7 +456,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "value")
 			},
-			Want: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mkey=\033[22mvalue\033[0m",
+			Want: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mkey=\033[0mvalue",
 		},
 	}
 

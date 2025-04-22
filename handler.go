@@ -203,6 +203,12 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		} else if a := rep(nil /* groups */, slog.Time(slog.TimeKey, val)); a.Key != "" {
 			if a.Value.Kind() == slog.KindTime {
 				h.appendTime(buf, a.Value.Time())
+			} else if tintVal, ok := a.Value.Any().(tintValue); ok {
+				if tintVal.Value.Kind() == slog.KindTime {
+					h.appendTintTime(buf, tintVal.color, tintVal.Value.Time())
+				} else {
+					h.appendTintValue(buf, tintVal, a.Key, "")
+				}
 			} else {
 				h.appendValue(buf, a.Value, false)
 			}
@@ -301,6 +307,14 @@ func (h *handler) WithGroup(name string) slog.Handler {
 
 func (h *handler) appendTime(buf *buffer, t time.Time) {
 	buf.WriteStringIf(!h.noColor, ansiFaint)
+	*buf = t.AppendFormat(*buf, h.timeFormat)
+	buf.WriteStringIf(!h.noColor, ansiReset)
+}
+
+func (h *handler) appendTintTime(buf *buffer, color uint8, t time.Time) {
+	if !h.noColor {
+		appendFaintAnsi(buf, color)
+	}
 	*buf = t.AppendFormat(*buf, h.timeFormat)
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
@@ -440,37 +454,42 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 	}
 }
 
-func ansiCode(m uint8) string {
-	if m < 8 {
-		return strconv.Itoa(int(m) + 30)
+func appendFaintAnsi(buf *buffer, color uint8) {
+	buf.WriteString("\u001b[2;")
+	if color < 8 {
+		*buf = strconv.AppendUint(*buf, uint64(color)+30, 10)
+	} else if color < 16 {
+		*buf = strconv.AppendUint(*buf, uint64(color)+82, 10)
+	} else {
+		buf.WriteString("38;5;")
+		*buf = strconv.AppendUint(*buf, uint64(color), 10)
 	}
-	if m < 16 {
-		return strconv.Itoa(int(m) - 8 + 90)
-	}
-	return "38;5;" + strconv.Itoa(int(m))
+	buf.WriteByte('m')
 }
 
-func faintAnsi(m uint8) string {
-	return "\u001b[2;" + ansiCode(m) + "m"
+func appendAnsi(buf *buffer, color uint8) {
+	buf.WriteString("\u001b[")
+	if color < 8 {
+		*buf = strconv.AppendUint(*buf, uint64(color)+30, 10)
+	} else if color < 16 {
+		*buf = strconv.AppendUint(*buf, uint64(color)+82, 10)
+	} else {
+		buf.WriteString("38;5;")
+		*buf = strconv.AppendUint(*buf, uint64(color), 10)
+	}
+	buf.WriteByte('m')
 }
 
 func (h *handler) appendTintValue(buf *buffer, val tintValue, attrKey, groupsPrefix string) {
-	buf.WriteStringIf(!h.noColor, faintAnsi(val.color))
+	if !h.noColor {
+		appendFaintAnsi(buf, val.color)
+	}
 	appendString(buf, groupsPrefix+attrKey, true, !h.noColor)
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
 	h.appendValue(buf, val.Value, true)
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
-
-// func (h *handler) appendTintError(buf *buffer, err tintError, attrKey, groupsPrefix string) {
-// 	buf.WriteStringIf(!h.noColor, ansiBrightRedFaint)
-// 	appendString(buf, groupsPrefix+attrKey, true, !h.noColor)
-// 	buf.WriteByte('=')
-// 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
-// 	appendString(buf, err.Error(), true, !h.noColor)
-// 	buf.WriteStringIf(!h.noColor, ansiReset)
-// }
 
 func appendString(buf *buffer, s string, quote, color bool) {
 	if quote && !color {
