@@ -361,7 +361,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:361 test`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:362 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {
@@ -449,7 +449,7 @@ func TestHandler(t *testing.T) {
 				NoColor: false,
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 					if a.Key == slog.MessageKey && len(groups) == 0 {
-						return tint.String(10, slog.MessageKey, a.String())
+						return tint.Attr(10, a)
 					}
 					return a
 				},
@@ -464,7 +464,22 @@ func TestHandler(t *testing.T) {
 				NoColor: false,
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 					if a.Key == slog.TimeKey && len(groups) == 0 {
-						return tint.Time(10, slog.TimeKey, a.Value.Time())
+						return tint.Attr(10, a)
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "value")
+			},
+			Want: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mkey=\033[0mvalue",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.TimeKey && len(groups) == 0 {
+						return tint.String(10, a.Key, a.Value.Time().Format(time.StampMilli))
 					}
 					return a
 				},

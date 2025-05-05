@@ -207,7 +207,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 				if tintVal.Value.Kind() == slog.KindTime {
 					h.appendTintTime(buf, tintVal.color, tintVal.Value.Time())
 				} else {
-					h.appendTintValue(buf, tintVal, a.Key, "")
+					h.appendTintValue(buf, tintVal, false, true)
 				}
 			} else {
 				h.appendValue(buf, a.Value, false)
@@ -251,7 +251,11 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		buf.WriteString(r.Message)
 		buf.WriteByte(' ')
 	} else if a := rep(nil /* groups */, slog.String(slog.MessageKey, r.Message)); a.Key != "" {
-		h.appendValue(buf, a.Value, false)
+		if tintVal, ok := a.Value.Any().(tintValue); ok {
+			h.appendTintValue(buf, tintVal, false, false)
+		} else {
+			h.appendValue(buf, a.Value, false)
+		}
 		buf.WriteByte(' ')
 	}
 
@@ -361,11 +365,18 @@ func (h *handler) appendSource(buf *buffer, src *slog.Source) {
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
+func resolveSupportingTint(val slog.Value) slog.Value {
+	if _, ok := val.Any().(tintValue); ok {
+		return val
+	}
+	return val.Resolve()
+}
+
 func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, groups []string) {
-	attr.Value = attr.Value.Resolve()
+	attr.Value = resolveSupportingTint(attr.Value)
 	if rep := h.replaceAttr; rep != nil && attr.Value.Kind() != slog.KindGroup {
 		attr = rep(groups, attr)
-		attr.Value = attr.Value.Resolve()
+		attr.Value = resolveSupportingTint(attr.Value)
 	}
 
 	if attr.Equal(slog.Attr{}) {
@@ -373,9 +384,9 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 	}
 
 	switch attr.Value.Kind() {
-	case slog.KindAny:
+	case slog.KindAny, slog.KindLogValuer:
 		if tintVal, ok := attr.Value.Any().(tintValue); ok {
-			h.appendTintValue(buf, tintVal, attr.Key, groupsPrefix)
+			h.appendTintAttr(buf, tintVal, attr.Key, groupsPrefix)
 			buf.WriteByte(' ')
 			return
 		}
@@ -480,7 +491,7 @@ func appendAnsi(buf *buffer, color uint8) {
 	buf.WriteByte('m')
 }
 
-func (h *handler) appendTintValue(buf *buffer, val tintValue, attrKey, groupsPrefix string) {
+func (h *handler) appendTintAttr(buf *buffer, val tintValue, attrKey, groupsPrefix string) {
 	if !h.noColor {
 		appendFaintAnsi(buf, val.color)
 	}
@@ -488,6 +499,18 @@ func (h *handler) appendTintValue(buf *buffer, val tintValue, attrKey, groupsPre
 	buf.WriteByte('=')
 	buf.WriteStringIf(!h.noColor, ansiResetFaint)
 	h.appendValue(buf, val.Value, true)
+	buf.WriteStringIf(!h.noColor, ansiReset)
+}
+
+func (h *handler) appendTintValue(buf *buffer, val tintValue, quote, faint bool) {
+	if !h.noColor {
+		if faint {
+			appendFaintAnsi(buf, val.color)
+		} else {
+			appendAnsi(buf, val.color)
+		}
+	}
+	h.appendValue(buf, val.Value, quote)
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
@@ -666,6 +689,11 @@ var safeSet = [utf8.RuneSelf]bool{
 type tintValue struct {
 	color uint8
 	slog.Value
+}
+
+// LogValue implements [slog.LogValuer].
+func (v tintValue) LogValue() slog.Value {
+	return v.Value
 }
 
 // Err returns a tinted (colorized) [slog.Attr] that will be written in red color
