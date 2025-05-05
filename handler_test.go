@@ -257,6 +257,22 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 INF test ""=""`,
 		},
+		{
+			Opts: &tint.Options{
+				TimeFormat: time.DateOnly,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if len(groups) == 0 && a.Key == slog.TimeKey {
+						return slog.Time(slog.TimeKey, a.Value.Time().Add(24*time.Hour))
+					}
+					return a
+				},
+				NoColor: true,
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test")
+			},
+			Want: `2009-11-11 INF test`,
+		},
 
 		{ // https://github.com/lmittmann/tint/issues/8
 			F: func(l *slog.Logger) {
@@ -345,7 +361,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:346 test`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:361 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {
