@@ -365,18 +365,20 @@ func (h *handler) appendSource(buf *buffer, src *slog.Source) {
 	buf.WriteStringIf(!h.noColor, ansiReset)
 }
 
-func resolveSupportingTint(val slog.Value) slog.Value {
-	if _, ok := val.Any().(tintValue); ok {
-		return val
+func resolveSupportingTint(val slog.Value, noColor bool) slog.Value {
+	if !noColor {
+		if _, ok := val.Any().(tintValue); ok {
+			return val
+		}
 	}
 	return val.Resolve()
 }
 
 func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, groups []string) {
-	attr.Value = resolveSupportingTint(attr.Value)
+	attr.Value = resolveSupportingTint(attr.Value, h.noColor)
 	if rep := h.replaceAttr; rep != nil && attr.Value.Kind() != slog.KindGroup {
 		attr = rep(groups, attr)
-		attr.Value = resolveSupportingTint(attr.Value)
+		attr.Value = resolveSupportingTint(attr.Value, h.noColor)
 	}
 
 	if attr.Equal(slog.Attr{}) {
@@ -385,10 +387,12 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 
 	switch attr.Value.Kind() {
 	case slog.KindAny, slog.KindLogValuer:
-		if tintVal, ok := attr.Value.Any().(tintValue); ok {
-			h.appendTintAttr(buf, tintVal, attr.Key, groupsPrefix)
-			buf.WriteByte(' ')
-			return
+		if !h.noColor {
+			if tintVal, ok := attr.Value.Any().(tintValue); ok {
+				h.appendTintAttr(buf, tintVal, attr.Key, groupsPrefix)
+				buf.WriteByte(' ')
+				return
+			}
 		}
 	case slog.KindGroup:
 		if attr.Key != "" {
@@ -704,6 +708,20 @@ func Err(err error) slog.Attr {
 	return Any(9, errKey, err)
 }
 
+// Attr returns a tinted (colorized) [slog.Attr] that will be written in the
+// specified color. When used with any other [slog.Handler], it behaves as a
+// plain [slog.Attr].
+//
+// # Colors
+//
+// Use the uint8 color value to specify the color of the attribute.
+//
+//   - 0-7: standard ANSI colors
+//   - 8-15: high intensity ANSI colors
+//   - 16-231: 216 colors (6×6×6 cube)
+//   - 232-255: grayscale from dark to light in 24 steps
+//
+// See https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 func Attr(color uint8, attr slog.Attr) slog.Attr {
 	return slog.Any(attr.Key, tintValue{color: color, Value: attr.Value})
 }
@@ -736,12 +754,12 @@ func Bool(color uint8, key string, value bool) slog.Attr {
 	return slog.Any(key, tintValue{color: color, Value: slog.BoolValue(value)})
 }
 
-func Duration(color uint8, key string, value time.Duration) slog.Attr {
-	return slog.Any(key, tintValue{color: color, Value: slog.DurationValue(value)})
-}
-
 func Time(color uint8, key string, value time.Time) slog.Attr {
 	return slog.Any(key, tintValue{color: color, Value: slog.TimeValue(value)})
+}
+
+func Duration(color uint8, key string, value time.Duration) slog.Attr {
+	return slog.Any(key, tintValue{color: color, Value: slog.DurationValue(value)})
 }
 
 func Group(color uint8, key string, attrs ...slog.Attr) slog.Attr {
