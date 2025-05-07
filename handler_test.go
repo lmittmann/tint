@@ -586,13 +586,17 @@ func TestReplaceAttr(t *testing.T) {
 	}
 }
 
-func TestErr(t *testing.T) {
+func TestAttr(t *testing.T) {
+	if !faketime.Equal(time.Now()) {
+		t.Skip(`skipping test; run with "-tags=faketime"`)
+	}
+
 	t.Run("text", func(t *testing.T) {
 		var buf bytes.Buffer
 		logger := slog.New(slog.NewTextHandler(&buf, nil))
-		logger.Info("test", tint.Err(errTest))
+		logger.Info("test", tint.Attr(10, slog.String("key", "val")))
 
-		want := `time=2009-11-10T23:00:00.000Z level=INFO msg=test err=fail`
+		want := `time=2009-11-10T23:00:00.000Z level=INFO msg=test key=val`
 		if got := strings.TrimSpace(buf.String()); want != got {
 			t.Fatalf("(-want +got)\n- %s\n+ %s", want, got)
 		}
@@ -601,9 +605,9 @@ func TestErr(t *testing.T) {
 	t.Run("json", func(t *testing.T) {
 		var buf bytes.Buffer
 		logger := slog.New(slog.NewJSONHandler(&buf, nil))
-		logger.Info("test", tint.Err(errTest))
+		logger.Info("test", tint.Attr(10, slog.String("key", "val")))
 
-		want := `{"time":"2009-11-10T23:00:00Z","level":"INFO","msg":"test","err":"fail"}`
+		want := `{"time":"2009-11-10T23:00:00Z","level":"INFO","msg":"test","key":"val"}`
 		if got := strings.TrimSpace(buf.String()); want != got {
 			t.Fatalf("(-want +got)\n- %s\n+ %s", want, got)
 		}
