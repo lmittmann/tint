@@ -373,7 +373,7 @@ func appendSource(buf *buffer, src *slog.Source) {
 }
 
 func (h *handler) resolve(val slog.Value) (resolvedVal slog.Value, color int16) {
-	if !h.noColor && val.Kind() == slog.KindAny {
+	if !h.noColor && val.Kind() == slog.KindLogValuer {
 		if tintVal, ok := val.Any().(tintValue); ok {
 			return tintVal.Value.Resolve(), int16(tintVal.color)
 		}
