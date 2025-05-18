@@ -489,6 +489,64 @@ func TestHandler(t *testing.T) {
 			},
 			Want: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mkey=\033[0mvalue",
 		},
+		{
+			Opts: &tint.Options{
+				AddSource: true,
+				NoColor:   false,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.SourceKey && len(groups) == 0 {
+						return tint.Attr(10, a)
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[2;92mtint/handler_test.go:504\033[0m test",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+				Level:   slog.LevelDebug - 4,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.LevelKey && len(groups) == 0 {
+						level, ok := a.Value.Any().(slog.Level)
+						if !ok || level > slog.LevelDebug-4 {
+							return a
+						}
+						return slog.String(a.Key, "TRC")
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				var levelTrace slog.Level = slog.LevelDebug - 4
+				l.Log(context.TODO(), levelTrace, "test")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m TRC test",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+				Level:   slog.LevelDebug - 4,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.LevelKey && len(groups) == 0 {
+						level, ok := a.Value.Any().(slog.Level)
+						if !ok || level > slog.LevelDebug-4 {
+							return a
+						}
+						return tint.String(13, a.Key, "TRC")
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				var levelTrace slog.Level = slog.LevelDebug - 4
+				l.Log(context.TODO(), levelTrace, "test")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mTRC\033[0m test",
+		},
 	}
 
 	for i, test := range tests {
