@@ -547,6 +547,30 @@ func TestHandler(t *testing.T) {
 			},
 			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mTRC\033[0m test",
 		},
+		{
+			F: func(l *slog.Logger) {
+				l.Info("test", "lvl", slog.LevelWarn)
+			},
+			Want: `Nov 10 23:00:00.000 INF test lvl=WARN`,
+		},
+		{
+			Opts: &tint.Options{NoColor: false},
+			F: func(l *slog.Logger) {
+				l.Info("test", "lvl", slog.LevelWarn)
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mlvl=\033[0mWARN",
+		},
+		{
+			Opts: &tint.Options{
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					return tint.Attr(13, a)
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test")
+			},
+			Want: "\033[2;95mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[95mtest\033[0m",
+		},
 	}
 
 	for i, test := range tests {
@@ -812,18 +836,6 @@ func BenchmarkLogAttrs(b *testing.B) {
 		})
 	}
 }
-
-// func TestTint(t *testing.T) {
-// 	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{
-// 		Level:      slog.LevelDebug,
-// 		TimeFormat: time.Kitchen,
-// 	})))
-
-// 	for i := 0; i < 256; i++ {
-// 		s := strings.Repeat(strconv.Itoa(int(i))+" ", 6)[:11]
-// 		slog.Info("test", tint.Attr(uint8(i), slog.String("color", s)), "nocolor", "123")
-// 	}
-// }
 
 // discarder is a slog.Handler that discards all records.
 type discarder struct{}

@@ -213,11 +213,19 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 
 	// write level
 	if rep == nil {
-		appendLevel(buf, r.Level, h.noColor)
+		h.appendTintLevel(buf, r.Level, -1)
 		buf.WriteByte(' ')
 	} else if a := rep(nil /* groups */, slog.Any(slog.LevelKey, r.Level)); a.Key != "" {
 		val, color := h.resolve(a.Value)
-		h.appendTintValue(buf, val, false, color, false)
+		if val.Kind() == slog.KindAny {
+			if lvlVal, ok := val.Any().(slog.Level); ok {
+				h.appendTintLevel(buf, lvlVal, color)
+			} else {
+				h.appendTintValue(buf, val, false, color, false)
+			}
+		} else {
+			h.appendTintValue(buf, val, false, color, false)
+		}
 		buf.WriteByte(' ')
 	}
 
@@ -323,7 +331,7 @@ func (h *handler) appendTintTime(buf *buffer, t time.Time, color int16) {
 	}
 }
 
-func appendLevel(buf *buffer, level slog.Level, noColor bool) {
+func (h *handler) appendTintLevel(buf *buffer, level slog.Level, color int16) {
 	str := func(base string, val slog.Level) []byte {
 		if val == 0 {
 			return []byte(base)
@@ -333,34 +341,35 @@ func appendLevel(buf *buffer, level slog.Level, noColor bool) {
 		return strconv.AppendInt([]byte(base), int64(val), 10)
 	}
 
-	if noColor {
-		switch {
-		case level < slog.LevelInfo:
-			buf.Write(str("DBG", level-slog.LevelDebug))
-		case level < slog.LevelWarn:
-			buf.Write(str("INF", level-slog.LevelInfo))
-		case level < slog.LevelError:
-			buf.Write(str("WRN", level-slog.LevelWarn))
-		default:
-			buf.Write(str("ERR", level-slog.LevelError))
+	if !h.noColor {
+		if color >= 0 {
+			appendAnsi(buf, uint8(color), false)
+		} else {
+			switch {
+			case level < slog.LevelInfo:
+			case level < slog.LevelWarn:
+				buf.WriteString(ansiBrightGreen)
+			case level < slog.LevelError:
+				buf.WriteString(ansiBrightYellow)
+			default:
+				buf.WriteString(ansiBrightRed)
+			}
 		}
-	} else {
-		switch {
-		case level < slog.LevelInfo:
-			buf.Write(str("DBG", level-slog.LevelDebug))
-		case level < slog.LevelWarn:
-			buf.WriteString(ansiBrightGreen)
-			buf.Write(str("INF", level-slog.LevelInfo))
-			buf.WriteString(ansiReset)
-		case level < slog.LevelError:
-			buf.WriteString(ansiBrightYellow)
-			buf.Write(str("WRN", level-slog.LevelWarn))
-			buf.WriteString(ansiReset)
-		default:
-			buf.WriteString(ansiBrightRed)
-			buf.Write(str("ERR", level-slog.LevelError))
-			buf.WriteString(ansiReset)
-		}
+	}
+
+	switch {
+	case level < slog.LevelInfo:
+		buf.Write(str("DBG", level-slog.LevelDebug))
+	case level < slog.LevelWarn:
+		buf.Write(str("INF", level-slog.LevelInfo))
+	case level < slog.LevelError:
+		buf.Write(str("WRN", level-slog.LevelWarn))
+	default:
+		buf.Write(str("ERR", level-slog.LevelError))
+	}
+
+	if !h.noColor && level >= slog.LevelInfo {
+		buf.WriteString(ansiReset)
 	}
 }
 
@@ -465,8 +474,6 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 		}()
 
 		switch cv := v.Any().(type) {
-		case slog.Level:
-			appendLevel(buf, cv, h.noColor)
 		case encoding.TextMarshaler:
 			data, err := cv.MarshalText()
 			if err != nil {
