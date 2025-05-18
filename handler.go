@@ -700,7 +700,7 @@ func (v tintValue) LogValue() slog.Value {
 //
 //	slog.Any("err", err)
 func Err(err error) slog.Attr {
-	return Any(9, errKey, err)
+	return Attr(9, slog.Any(errKey, err))
 }
 
 // Attr returns a tinted (colorized) [slog.Attr] that will be written in the
@@ -719,44 +719,4 @@ func Err(err error) slog.Attr {
 // See https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 func Attr(color uint8, attr slog.Attr) slog.Attr {
 	return slog.Any(attr.Key, tintValue{color: color, Value: attr.Value})
-}
-
-func Any(color uint8, key string, value any) slog.Attr {
-	return slog.Any(key, tintValue{color: color, Value: slog.AnyValue(value)})
-}
-
-func String(color uint8, key, value string) slog.Attr {
-	return slog.Any(key, tintValue{color: color, Value: slog.StringValue(value)})
-}
-
-func Int(color uint8, key string, value int) slog.Attr {
-	return slog.Any(key, tintValue{color: color, Value: slog.IntValue(value)})
-}
-
-func Int64(color uint8, key string, value int64) slog.Attr {
-	return slog.Any(key, tintValue{color: color, Value: slog.Int64Value(value)})
-}
-
-func Uint64(color uint8, key string, value uint64) slog.Attr {
-	return slog.Any(key, tintValue{color: color, Value: slog.Uint64Value(value)})
-}
-
-func Float64(color uint8, key string, value float64) slog.Attr {
-	return slog.Any(key, tintValue{color: color, Value: slog.Float64Value(value)})
-}
-
-func Bool(color uint8, key string, value bool) slog.Attr {
-	return slog.Any(key, tintValue{color: color, Value: slog.BoolValue(value)})
-}
-
-func Time(color uint8, key string, value time.Time) slog.Attr {
-	return slog.Any(key, tintValue{color: color, Value: slog.TimeValue(value)})
-}
-
-func Duration(color uint8, key string, value time.Duration) slog.Attr {
-	return slog.Any(key, tintValue{color: color, Value: slog.DurationValue(value)})
-}
-
-func Group(color uint8, key string, attrs ...slog.Attr) slog.Attr {
-	return slog.Any(key, tintValue{color: color, Value: slog.GroupValue(attrs...)})
 }

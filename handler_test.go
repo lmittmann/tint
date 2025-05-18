@@ -433,14 +433,14 @@ func TestHandler(t *testing.T) {
 		{
 			Opts: &tint.Options{NoColor: false},
 			F: func(l *slog.Logger) {
-				l.Info("test", tint.String(10, "key", "value"))
+				l.Info("test", tint.Attr(10, slog.String("key", "value")))
 			},
 			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;92mkey=\033[22mvalue\033[0m",
 		},
 		{
 			Opts: &tint.Options{NoColor: false},
 			F: func(l *slog.Logger) {
-				l.Info("test", tint.String(226, "key", "value"))
+				l.Info("test", tint.Attr(226, slog.String("key", "value")))
 			},
 			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;38;5;226mkey=\033[22mvalue\033[0m",
 		},
@@ -479,7 +479,7 @@ func TestHandler(t *testing.T) {
 				NoColor: false,
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 					if a.Key == slog.TimeKey && len(groups) == 0 {
-						return tint.String(10, a.Key, a.Value.Time().Format(time.StampMilli))
+						return tint.Attr(10, slog.String(a.Key, a.Value.Time().Format(time.StampMilli)))
 					}
 					return a
 				},
@@ -536,7 +536,7 @@ func TestHandler(t *testing.T) {
 						if !ok || level > slog.LevelDebug-4 {
 							return a
 						}
-						return tint.String(13, a.Key, "TRC")
+						return tint.Attr(13, slog.String(a.Key, "TRC"))
 					}
 					return a
 				},
