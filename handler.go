@@ -718,5 +718,6 @@ func Err(err error) slog.Attr {
 //
 // See https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 func Attr(color uint8, attr slog.Attr) slog.Attr {
-	return slog.Any(attr.Key, tintValue{color: color, Value: attr.Value})
+	attr.Value = slog.AnyValue(tintValue{color: color, Value: attr.Value})
+	return attr
 }
