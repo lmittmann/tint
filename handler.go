@@ -324,35 +324,44 @@ func (h *handler) appendTintTime(buf *buffer, t time.Time, color int16) {
 }
 
 func appendLevel(buf *buffer, level slog.Level, noColor bool) {
-	switch {
-	case level < slog.LevelInfo:
-		buf.WriteString("DBG")
-		appendLevelDelta(buf, level-slog.LevelDebug)
-	case level < slog.LevelWarn:
-		buf.WriteStringIf(!noColor, ansiBrightGreen)
-		buf.WriteString("INF")
-		appendLevelDelta(buf, level-slog.LevelInfo)
-		buf.WriteStringIf(!noColor, ansiReset)
-	case level < slog.LevelError:
-		buf.WriteStringIf(!noColor, ansiBrightYellow)
-		buf.WriteString("WRN")
-		appendLevelDelta(buf, level-slog.LevelWarn)
-		buf.WriteStringIf(!noColor, ansiReset)
-	default:
-		buf.WriteStringIf(!noColor, ansiBrightRed)
-		buf.WriteString("ERR")
-		appendLevelDelta(buf, level-slog.LevelError)
-		buf.WriteStringIf(!noColor, ansiReset)
+	str := func(base string, val slog.Level) []byte {
+		if val == 0 {
+			return []byte(base)
+		} else if val > 0 {
+			return strconv.AppendInt(append([]byte(base), '+'), int64(val), 10)
+		}
+		return strconv.AppendInt([]byte(base), int64(val), 10)
 	}
-}
 
-func appendLevelDelta(buf *buffer, delta slog.Level) {
-	if delta == 0 {
-		return
-	} else if delta > 0 {
-		buf.WriteByte('+')
+	if noColor {
+		switch {
+		case level < slog.LevelInfo:
+			buf.Write(str("DBG", level-slog.LevelDebug))
+		case level < slog.LevelWarn:
+			buf.Write(str("INF", level-slog.LevelInfo))
+		case level < slog.LevelError:
+			buf.Write(str("WRN", level-slog.LevelWarn))
+		default:
+			buf.Write(str("ERR", level-slog.LevelError))
+		}
+	} else {
+		switch {
+		case level < slog.LevelInfo:
+			buf.Write(str("DBG", level-slog.LevelDebug))
+		case level < slog.LevelWarn:
+			buf.WriteString(ansiBrightGreen)
+			buf.Write(str("INF", level-slog.LevelInfo))
+			buf.WriteString(ansiReset)
+		case level < slog.LevelError:
+			buf.WriteString(ansiBrightYellow)
+			buf.Write(str("WRN", level-slog.LevelWarn))
+			buf.WriteString(ansiReset)
+		default:
+			buf.WriteString(ansiBrightRed)
+			buf.Write(str("ERR", level-slog.LevelError))
+			buf.WriteString(ansiReset)
+		}
 	}
-	*buf = strconv.AppendInt(*buf, int64(delta), 10)
 }
 
 func appendSource(buf *buffer, src *slog.Source) {
