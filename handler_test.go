@@ -31,6 +31,46 @@ func Example() {
 	// Output:
 }
 
+// Create a new logger that writes all errors in red:
+func Example_redErrors() {
+	w := os.Stderr
+	logger := slog.New(
+		tint.NewHandler(w, &tint.Options{
+			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+				if a.Value.Kind() == slog.KindAny {
+					if _, ok := a.Value.Any().(error); ok {
+						return tint.Attr(9, a)
+					}
+				}
+				return a
+			},
+		}),
+	)
+	logger.Error("DB connection lost", "error", errors.New("connection reset"), "db", "myapp")
+	// Output:
+}
+
+// Create a new logger with a custom TRACE level:
+func Example_traceLevel() {
+	const LevelTrace = slog.LevelDebug - 4
+
+	w := os.Stderr
+	logger := slog.New(tint.NewHandler(w, &tint.Options{
+		Level: LevelTrace,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.LevelKey && len(groups) == 0 {
+				level, ok := a.Value.Any().(slog.Level)
+				if ok && level <= LevelTrace {
+					return tint.Attr(13, slog.String(a.Key, "TRC"))
+				}
+			}
+			return a
+		},
+	}))
+	logger.Log(context.Background(), LevelTrace, "DB query", "query", "SELECT * FROM users", "duration", 543*time.Microsecond)
+	// Output:
+}
+
 // Run test with "faketime" tag:
 //
 //	TZ="" go test -tags=faketime

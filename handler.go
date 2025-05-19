@@ -12,6 +12,24 @@ Options.ReplaceAttr can be used to alter or drop attributes. If set, it is
 called on each non-group attribute before it is logged.
 See [slog.HandlerOptions] for details.
 
+Create a new logger with a custom TRACE level:
+
+	const LevelTrace = slog.LevelDebug - 4
+
+	w := os.Stderr
+	logger := slog.New(tint.NewHandler(w, &tint.Options{
+		Level: LevelTrace,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.LevelKey && len(groups) == 0 {
+				level, ok := a.Value.Any().(slog.Level)
+				if ok && level <= LevelTrace {
+					return tint.Attr(13, slog.String(a.Key, "TRC"))
+				}
+			}
+			return a
+		},
+	}))
+
 Create a new logger that doesn't write the time:
 
 	w := os.Stderr
@@ -32,10 +50,10 @@ Create a new logger that writes all errors in red:
 	logger := slog.New(
 		tint.NewHandler(w, &tint.Options{
 			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-				if err, ok := a.Value.Any().(error); ok {
-					aErr := tint.Err(err)
-					aErr.Key = a.Key
-					return aErr
+				if a.Value.Kind() == slog.KindAny {
+					if _, ok := a.Value.Any().(error); ok {
+						return tint.Attr(9, a)
+					}
 				}
 				return a
 			},
@@ -44,9 +62,9 @@ Create a new logger that writes all errors in red:
 
 # Automatically Enable Colors
 
-Colors are enabled by default and can be disabled using the Options.NoColor
-attribute. To automatically enable colors based on the terminal capabilities,
-use e.g. the [go-isatty] package.
+Colors are enabled by default. Use the Options.NoColor field to disable
+color output. To automatically enable colors based on terminal capabilities, use
+e.g. the [go-isatty] package:
 
 	w := os.Stderr
 	logger := slog.New(
@@ -57,7 +75,7 @@ use e.g. the [go-isatty] package.
 
 # Windows Support
 
-Color support on Windows can be added by using e.g. the [go-colorable] package.
+Color support on Windows can be added by using e.g. the [go-colorable] package:
 
 	w := os.Stderr
 	logger := slog.New(
@@ -89,20 +107,19 @@ import (
 
 // ANSI modes
 const (
-	ansiReset          = "\u001b[0m"
-	ansiFaint          = "\u001b[2m"
-	ansiResetFaint     = "\u001b[22m"
-	ansiBrightRed      = "\u001b[91m"
-	ansiBrightGreen    = "\u001b[92m"
-	ansiBrightYellow   = "\u001b[93m"
-	ansiBrightRedFaint = "\u001b[91;2m"
+	ansiReset        = "\u001b[0m"
+	ansiFaint        = "\u001b[2m"
+	ansiResetFaint   = "\u001b[22m"
+	ansiBrightRed    = "\u001b[91m"
+	ansiBrightGreen  = "\u001b[92m"
+	ansiBrightYellow = "\u001b[93m"
 
 	ansiEsc = '\u001b'
 )
 
 const errKey = "err"
 
-var (
+const (
 	defaultLevel      = slog.LevelInfo
 	defaultTimeFormat = time.StampMilli
 )
