@@ -98,7 +98,7 @@ logger := slog.New(
 
 ### Automatically Enable Colors
 
-Colors are enabled by default. Use the Options.NoColor field to disable
+Colors are enabled by default. Use the `Options.NoColor` field to disable
 color output. To automatically enable colors based on terminal capabilities, use
 e.g. the [`go-isatty`](https://github.com/mattn/go-isatty) package:
 
