@@ -15,17 +15,12 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.21"
-      - name: go fmt
-        run: |
-          output=$(gofmt -s -d .)
-          echo "$output"
-          test -z "$output"
-      - name: go vet
+      - name: fmt
+        run: diff -u <(echo -n) <(gofmt -s -d .)
+      - name: vet
         run: go vet ./...
-      - name: install staticcheck
-        run: go install honnef.co/go/tools/cmd/staticcheck@latest
       - name: staticcheck
-        run: staticcheck ./...
+        run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
 
   test:
     name: Test
@@ -35,5 +30,5 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.21"
-      - name: go test
+      - name: test
         run: TZ="" go test ./... -tags=faketime
