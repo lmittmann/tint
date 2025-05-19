@@ -19,15 +19,53 @@ import (
 var faketime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 
 func Example() {
-	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{
+	w := os.Stderr
+	logger := slog.New(tint.NewHandler(w, &tint.Options{
 		Level:      slog.LevelDebug,
 		TimeFormat: time.Kitchen,
-	})))
+	}))
+	logger.Info("Starting server", "addr", ":8080", "env", "production")
+	logger.Debug("Connected to DB", "db", "myapp", "host", "localhost:5432")
+	logger.Warn("Slow request", "method", "GET", "path", "/users", "duration", 497*time.Millisecond)
+	logger.Error("DB connection lost", tint.Err(errors.New("connection reset")), "db", "myapp")
+	// Output:
+}
 
-	slog.Info("Starting server", "addr", ":8080", "env", "production")
-	slog.Debug("Connected to DB", "db", "myapp", "host", "localhost:5432")
-	slog.Warn("Slow request", "method", "GET", "path", "/users", "duration", 497*time.Millisecond)
-	slog.Error("DB connection lost", tint.Err(errors.New("connection reset")), "db", "myapp")
+// Create a new logger that writes all errors in red:
+func Example_redErrors() {
+	w := os.Stderr
+	logger := slog.New(tint.NewHandler(w, &tint.Options{
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Value.Kind() == slog.KindAny {
+				if _, ok := a.Value.Any().(error); ok {
+					return tint.Attr(9, a)
+				}
+			}
+			return a
+		},
+	}))
+	logger.Error("DB connection lost", "error", errors.New("connection reset"), "db", "myapp")
+	// Output:
+}
+
+// Create a new logger with a custom TRACE level:
+func Example_traceLevel() {
+	const LevelTrace = slog.LevelDebug - 4
+
+	w := os.Stderr
+	logger := slog.New(tint.NewHandler(w, &tint.Options{
+		Level: LevelTrace,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.LevelKey && len(groups) == 0 {
+				level, ok := a.Value.Any().(slog.Level)
+				if ok && level <= LevelTrace {
+					return tint.Attr(13, slog.String(a.Key, "TRC"))
+				}
+			}
+			return a
+		},
+	}))
+	logger.Log(context.Background(), LevelTrace, "DB query", "query", "SELECT * FROM users", "duration", 543*time.Microsecond)
 	// Output:
 }
 
@@ -100,7 +138,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:101 test key=val`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:139 test key=val`,
 		},
 		{
 			Opts: &tint.Options{
@@ -257,6 +295,168 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 INF test ""=""`,
 		},
+		{
+			Opts: &tint.Options{
+				TimeFormat: time.DateOnly,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if len(groups) == 0 && a.Key == slog.TimeKey {
+						return slog.Time(slog.TimeKey, a.Value.Time().Add(24*time.Hour))
+					}
+					return a
+				},
+				NoColor: true,
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test")
+			},
+			Want: `2009-11-11 INF test`,
+		},
+		{
+			F: func(l *slog.Logger) {
+				l.Info("test", "lvl", slog.LevelWarn)
+			},
+			Want: `Nov 10 23:00:00.000 INF test lvl=WARN`,
+		},
+		{
+			Opts: &tint.Options{NoColor: false},
+			F: func(l *slog.Logger) {
+				l.Info("test", "lvl", slog.LevelWarn)
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mlvl=\033[0mWARN",
+		},
+		{
+			Opts: &tint.Options{
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					return tint.Attr(13, a)
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test")
+			},
+			Want: "\033[2;95mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[95mtest\033[0m",
+		},
+		{
+			Opts: &tint.Options{NoColor: false},
+			F: func(l *slog.Logger) {
+				l.Error("test", tint.Err(errors.New("fail")))
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[91mERR\033[0m test \033[2;91merr=\033[22mfail\033[0m",
+		},
+		{
+			Opts: &tint.Options{NoColor: false},
+			F: func(l *slog.Logger) {
+				l.Info("test", tint.Attr(10, slog.String("key", "value")))
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;92mkey=\033[22mvalue\033[0m",
+		},
+		{
+			Opts: &tint.Options{NoColor: false},
+			F: func(l *slog.Logger) {
+				l.Info("test", tint.Attr(226, slog.String("key", "value")))
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;38;5;226mkey=\033[22mvalue\033[0m",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.MessageKey && len(groups) == 0 {
+						return tint.Attr(10, a)
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "value")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[92mtest\033[0m \033[2mkey=\033[0mvalue",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.TimeKey && len(groups) == 0 {
+						return tint.Attr(10, a)
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "value")
+			},
+			Want: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mkey=\033[0mvalue",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.TimeKey && len(groups) == 0 {
+						return tint.Attr(10, slog.String(a.Key, a.Value.Time().Format(time.StampMilli)))
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "value")
+			},
+			Want: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mkey=\033[0mvalue",
+		},
+		{
+			Opts: &tint.Options{
+				AddSource: true,
+				NoColor:   false,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.SourceKey && len(groups) == 0 {
+						return tint.Attr(10, a)
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[2;92mtint/handler_test.go:416\033[0m test",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+				Level:   slog.LevelDebug - 4,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.LevelKey && len(groups) == 0 {
+						level, ok := a.Value.Any().(slog.Level)
+						if ok && level <= slog.LevelDebug-4 {
+							return slog.String(a.Key, "TRC")
+						}
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				const levelTrace = slog.LevelDebug - 4
+				l.Log(context.TODO(), levelTrace, "test")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m TRC test",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+				Level:   slog.LevelDebug - 4,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.LevelKey && len(groups) == 0 {
+						level, ok := a.Value.Any().(slog.Level)
+						if ok && level <= slog.LevelDebug-4 {
+							return tint.Attr(13, slog.String(a.Key, "TRC"))
+						}
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				const levelTrace = slog.LevelDebug - 4
+				l.Log(context.TODO(), levelTrace, "test")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mTRC\033[0m test",
+		},
 
 		{ // https://github.com/lmittmann/tint/issues/8
 			F: func(l *slog.Logger) {
@@ -345,7 +545,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:346 test`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:546 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {
@@ -364,36 +564,28 @@ func TestHandler(t *testing.T) {
 			Want: `Nov 10 23:00:00.000 INF test key="{A:123 B:<nil>}"`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/59
-			Opts: &tint.Options{
-				NoColor: false,
-			},
+			Opts: &tint.Options{NoColor: false},
 			F: func(l *slog.Logger) {
 				l.Info("test", "color", "\033[92mgreen\033[0m")
 			},
 			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\033[92mgreen\033[0m",
 		},
 		{
-			Opts: &tint.Options{
-				NoColor: false,
-			},
+			Opts: &tint.Options{NoColor: false},
 			F: func(l *slog.Logger) {
 				l.Info("test", "color", "\033[92mgreen quoted\033[0m")
 			},
 			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\"\033[92mgreen quoted\033[0m\"",
 		},
 		{
-			Opts: &tint.Options{
-				NoColor: true,
-			},
+			Opts: &tint.Options{NoColor: true},
 			F: func(l *slog.Logger) {
 				l.Info("test", "color", "\033[92mgreen\033[0m")
 			},
 			Want: `Nov 10 23:00:00.000 INF test color=green`,
 		},
 		{
-			Opts: &tint.Options{
-				NoColor: true,
-			},
+			Opts: &tint.Options{NoColor: true},
 			F: func(l *slog.Logger) {
 				l.Info("test", "color", "\033[92mgreen quoted\033[0m")
 			},
@@ -511,13 +703,17 @@ func TestReplaceAttr(t *testing.T) {
 	}
 }
 
-func TestErr(t *testing.T) {
+func TestAttr(t *testing.T) {
+	if !faketime.Equal(time.Now()) {
+		t.Skip(`skipping test; run with "-tags=faketime"`)
+	}
+
 	t.Run("text", func(t *testing.T) {
 		var buf bytes.Buffer
 		logger := slog.New(slog.NewTextHandler(&buf, nil))
-		logger.Info("test", tint.Err(errTest))
+		logger.Info("test", tint.Attr(10, slog.String("key", "val")))
 
-		want := `time=2009-11-10T23:00:00.000Z level=INFO msg=test err=fail`
+		want := `time=2009-11-10T23:00:00.000Z level=INFO msg=test key=val`
 		if got := strings.TrimSpace(buf.String()); want != got {
 			t.Fatalf("(-want +got)\n- %s\n+ %s", want, got)
 		}
@@ -526,9 +722,9 @@ func TestErr(t *testing.T) {
 	t.Run("json", func(t *testing.T) {
 		var buf bytes.Buffer
 		logger := slog.New(slog.NewJSONHandler(&buf, nil))
-		logger.Info("test", tint.Err(errTest))
+		logger.Info("test", tint.Attr(10, slog.String("key", "val")))
 
-		want := `{"time":"2009-11-10T23:00:00Z","level":"INFO","msg":"test","err":"fail"}`
+		want := `{"time":"2009-11-10T23:00:00Z","level":"INFO","msg":"test","key":"val"}`
 		if got := strings.TrimSpace(buf.String()); want != got {
 			t.Fatalf("(-want +got)\n- %s\n+ %s", want, got)
 		}
@@ -648,6 +844,14 @@ func BenchmarkLogAttrs(b *testing.B) {
 			func(logger *slog.Logger) {
 				logger.LogAttrs(context.TODO(), slog.LevelError, testMessage,
 					tint.Err(errTest),
+				)
+			},
+		},
+		{
+			"attr",
+			func(logger *slog.Logger) {
+				logger.LogAttrs(context.TODO(), slog.LevelError, testMessage,
+					tint.Attr(9, slog.String("string", testString)),
 				)
 			},
 		},
