@@ -51,16 +51,16 @@ const LevelTrace = slog.LevelDebug - 4
 
 w := os.Stderr
 logger := slog.New(tint.NewHandler(w, &tint.Options{
-	Level: LevelTrace,
-	ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-		if a.Key == slog.LevelKey && len(groups) == 0 {
-			level, ok := a.Value.Any().(slog.Level)
-			if ok && level <= LevelTrace {
-				return tint.Attr(13, slog.String(a.Key, "TRC"))
-			}
-		}
-		return a
-	},
+    Level: LevelTrace,
+    ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+        if a.Key == slog.LevelKey && len(groups) == 0 {
+            level, ok := a.Value.Any().(slog.Level)
+            if ok && level <= LevelTrace {
+                return tint.Attr(13, slog.String(a.Key, "TRC"))
+            }
+        }
+        return a
+    },
 }))
 ```
 
