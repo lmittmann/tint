@@ -432,7 +432,7 @@ func TestHandler(t *testing.T) {
 				},
 			},
 			F: func(l *slog.Logger) {
-				var levelTrace slog.Level = slog.LevelDebug - 4
+				const levelTrace = slog.LevelDebug - 4
 				l.Log(context.TODO(), levelTrace, "test")
 			},
 			Want: "\033[2mNov 10 23:00:00.000\033[0m TRC test",
@@ -452,7 +452,7 @@ func TestHandler(t *testing.T) {
 				},
 			},
 			F: func(l *slog.Logger) {
-				var levelTrace slog.Level = slog.LevelDebug - 4
+				const levelTrace = slog.LevelDebug - 4
 				l.Log(context.TODO(), levelTrace, "test")
 			},
 			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mTRC\033[0m test",
