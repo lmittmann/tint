@@ -697,7 +697,7 @@ type tintValue struct {
 	slog.Value
 }
 
-// LogValue implements [slog.LogValuer].
+// LogValue implements the [slog.LogValuer] interface.
 func (v tintValue) LogValue() slog.Value {
 	return v.Value
 }
@@ -711,12 +711,10 @@ func Err(err error) slog.Attr {
 }
 
 // Attr returns a tinted (colorized) [slog.Attr] that will be written in the
-// specified color. When used with any other [slog.Handler], it behaves as a
+// specified color by the [tint.Handler]. When used with any other [slog.Handler], it behaves as a
 // plain [slog.Attr].
 //
-// # Colors
-//
-// Use the uint8 color value to specify the color of the attribute.
+// Use the uint8 color value to specify the color of the attribute:
 //
 //   - 0-7: standard ANSI colors
 //   - 8-15: high intensity ANSI colors
