@@ -64,7 +64,7 @@ Create a new logger that writes all errors in red:
 
 Colors are enabled by default. Use the Options.NoColor field to disable
 color output. To automatically enable colors based on terminal capabilities, use
-e.g. the [go-isatty] package:
+e.g., the [go-isatty] package:
 
 	w := os.Stderr
 	logger := slog.New(
@@ -75,7 +75,7 @@ e.g. the [go-isatty] package:
 
 # Windows Support
 
-Color support on Windows can be added by using e.g. the [go-colorable] package:
+Color support on Windows can be added by using e.g., the [go-colorable] package:
 
 	w := os.Stderr
 	logger := slog.New(
