@@ -384,7 +384,7 @@ func appendSource(buf *buffer, src *slog.Source) {
 func (h *handler) resolve(val slog.Value) (resolvedVal slog.Value, color int16) {
 	if !h.noColor && val.Kind() == slog.KindLogValuer {
 		if tintVal, ok := val.Any().(tintValue); ok {
-			return tintVal.Value.Resolve(), int16(tintVal.color)
+			return tintVal.Value.Resolve(), int16(tintVal.Color)
 		}
 	}
 	return val.Resolve(), -1
@@ -693,8 +693,8 @@ var safeSet = [utf8.RuneSelf]bool{
 }
 
 type tintValue struct {
-	color uint8
 	slog.Value
+	Color uint8
 }
 
 // LogValue implements the [slog.LogValuer] interface.
@@ -723,6 +723,6 @@ func Err(err error) slog.Attr {
 //
 // See https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 func Attr(color uint8, attr slog.Attr) slog.Attr {
-	attr.Value = slog.AnyValue(tintValue{color: color, Value: attr.Value})
+	attr.Value = slog.AnyValue(tintValue{attr.Value, color})
 	return attr
 }
