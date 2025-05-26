@@ -105,8 +105,9 @@ import (
 	"unicode/utf8"
 )
 
-// ANSI modes
 const (
+	// ANSI modes
+	ansiEsc          = '\u001b'
 	ansiReset        = "\u001b[0m"
 	ansiFaint        = "\u001b[2m"
 	ansiResetFaint   = "\u001b[22m"
@@ -114,12 +115,8 @@ const (
 	ansiBrightGreen  = "\u001b[92m"
 	ansiBrightYellow = "\u001b[93m"
 
-	ansiEsc = '\u001b'
-)
+	errKey = "err"
 
-const errKey = "err"
-
-const (
 	defaultLevel      = slog.LevelInfo
 	defaultTimeFormat = time.StampMilli
 )
