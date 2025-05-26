@@ -730,6 +730,35 @@ func TestAttr(t *testing.T) {
 	})
 }
 
+func TestFormat(t *testing.T) {
+	tests := []struct {
+		Args []any
+	}{
+		{},
+		{[]any{"test", testMessage}},
+		{[]any{"test", testTime}},
+		{[]any{"test", testString}},
+		{[]any{"test", testInt}},
+		{[]any{"test", testDuration}},
+		{[]any{"test", errTest}},
+	}
+
+	repl := drop(slog.TimeKey, slog.LevelKey, slog.MessageKey, slog.SourceKey)
+	for i, test := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			var textBuf, tintBuf bytes.Buffer
+			textLogger := slog.New(slog.NewTextHandler(&textBuf, &slog.HandlerOptions{ReplaceAttr: repl}))
+			tintLogger := slog.New(tint.NewHandler(&tintBuf, &tint.Options{ReplaceAttr: repl, NoColor: true}))
+			textLogger.Info("", test.Args...)
+			tintLogger.Info("", test.Args...)
+
+			if textBuf.String() != tintBuf.String() {
+				t.Fatalf("(-want +got)\ntext - %q\ntint + %q", textBuf.String(), tintBuf.String())
+			}
+		})
+	}
+}
+
 // See https://github.com/golang/exp/blob/master/slog/benchmarks/benchmarks_test.go#L25
 //
 // Run e.g.:
