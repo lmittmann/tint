@@ -296,9 +296,10 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	})
 
 	if len(*buf) == 0 {
-		return nil
+		buf.WriteByte('\n')
+	} else {
+		(*buf)[len(*buf)-1] = '\n' // replace last space with newline
 	}
-	(*buf)[len(*buf)-1] = '\n' // replace last space with newline
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
