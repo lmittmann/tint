@@ -599,6 +599,12 @@ var (
 			},
 			Want: `Nov 10 23:00:00.000 INF test time=<nil>`,
 		},
+		{ // https://github.com/lmittmann/tint/pull/94
+			F: func(l *slog.Logger) {
+				l.Info("test", "time", testTime)
+			},
+			Want: `Nov 10 23:00:00.000 INF test time=2022-05-01T00:00:00.000Z`,
+		},
 	}
 )
 
@@ -616,7 +622,10 @@ func TestHandler(t *testing.T) {
 			l := slog.New(tint.NewHandler(&buf, test.Opts))
 			test.F(l)
 
-			got := strings.TrimRight(buf.String(), "\n")
+			got, foundNewline := strings.CutSuffix(buf.String(), "\n")
+			if !foundNewline {
+				t.Fatalf("missing newline")
+			}
 			if test.Want != got {
 				t.Fatalf("(-want +got)\n- %s\n+ %s", test.Want, got)
 			}
