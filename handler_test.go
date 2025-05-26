@@ -16,8 +16,6 @@ import (
 	"github.com/lmittmann/tint"
 )
 
-var faketime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
-
 func Example() {
 	w := os.Stderr
 	logger := slog.New(tint.NewHandler(w, &tint.Options{
@@ -69,15 +67,10 @@ func Example_traceLevel() {
 	// Output:
 }
 
-// Run test with "faketime" tag:
-//
-//	TZ="" go test -tags=faketime
-func TestHandler(t *testing.T) {
-	if !faketime.Equal(time.Now()) {
-		t.Skip(`skipping test; run with "-tags=faketime"`)
-	}
+var (
+	faketime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 
-	tests := []struct {
+	handlerTests = []struct {
 		Opts *tint.Options
 		F    func(l *slog.Logger)
 		Want string
@@ -138,7 +131,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:139 test key=val`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:132 test key=val`,
 		},
 		{
 			Opts: &tint.Options{
@@ -415,7 +408,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[2;92mtint/handler_test.go:416\033[0m test",
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[2;92mtint/handler_test.go:409\033[0m test",
 		},
 		{
 			Opts: &tint.Options{
@@ -545,7 +538,7 @@ func TestHandler(t *testing.T) {
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:546 test`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:539 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {
@@ -606,9 +599,21 @@ func TestHandler(t *testing.T) {
 			},
 			Want: `Nov 10 23:00:00.000 INF test time=<nil>`,
 		},
+		{ // https://github.com/lmittmann/tint/pull/94
+			F: func(l *slog.Logger) {
+				l.Info("test", "time", testTime)
+			},
+			Want: `Nov 10 23:00:00.000 INF test time=2022-05-01T00:00:00.000Z`,
+		},
+	}
+)
+
+func TestHandler(t *testing.T) {
+	if now := time.Now(); !faketime.Equal(now) || now.Location().String() != "UTC" {
+		t.Skip(`run: TZ="" go test -tags=faketime`)
 	}
 
-	for i, test := range tests {
+	for i, test := range handlerTests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			var buf bytes.Buffer
 			if test.Opts == nil {
@@ -617,7 +622,10 @@ func TestHandler(t *testing.T) {
 			l := slog.New(tint.NewHandler(&buf, test.Opts))
 			test.F(l)
 
-			got := strings.TrimRight(buf.String(), "\n")
+			got, foundNewline := strings.CutSuffix(buf.String(), "\n")
+			if !foundNewline {
+				t.Fatalf("missing newline")
+			}
 			if test.Want != got {
 				t.Fatalf("(-want +got)\n- %s\n+ %s", test.Want, got)
 			}
@@ -657,8 +665,8 @@ func replace(new slog.Value, keys ...string) func([]string, slog.Attr) slog.Attr
 }
 
 func TestReplaceAttr(t *testing.T) {
-	if !faketime.Equal(time.Now()) {
-		t.Skip(`skipping test; run with "-tags=faketime"`)
+	if now := time.Now(); !faketime.Equal(now) || now.Location().String() != "UTC" {
+		t.Skip(`run: TZ="" go test -tags=faketime`)
 	}
 
 	tests := [][]any{
@@ -704,8 +712,8 @@ func TestReplaceAttr(t *testing.T) {
 }
 
 func TestAttr(t *testing.T) {
-	if !faketime.Equal(time.Now()) {
-		t.Skip(`skipping test; run with "-tags=faketime"`)
+	if now := time.Now(); !faketime.Equal(now) || now.Location().String() != "UTC" {
+		t.Skip(`run: TZ="" go test -tags=faketime`)
 	}
 
 	t.Run("text", func(t *testing.T) {
