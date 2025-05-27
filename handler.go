@@ -401,7 +401,11 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 	attr.Value, color = h.resolve(attr.Value)
 	if rep := h.opts.ReplaceAttr; rep != nil && attr.Value.Kind() != slog.KindGroup {
 		attr = rep(groups, attr)
-		attr.Value, color = h.resolve(attr.Value)
+		var colorRep int16
+		attr.Value, colorRep = h.resolve(attr.Value)
+		if colorRep >= 0 {
+			color = colorRep
+		}
 	}
 
 	if attr.Equal(slog.Attr{}) {
