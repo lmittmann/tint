@@ -605,7 +605,7 @@ var (
 			},
 			Want: `Nov 10 23:00:00.000 INF test time=2022-05-01T00:00:00.000Z`,
 		},
-		{ // https://github.com/lmittmann/tint/pull/95
+		{ // https://github.com/lmittmann/tint/pull/96
 			Opts: &tint.Options{
 				NoColor: false,
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
@@ -616,6 +616,18 @@ var (
 				l.Info("test", tint.Attr(10, slog.String("key", "val")))
 			},
 			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;92mkey=\033[22mval\033[0m",
+		},
+		{
+			Opts: &tint.Options{
+				NoColor: false,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					return tint.Attr(13, a)
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test", tint.Attr(10, slog.String("key", "val")))
+			},
+			Want: "\033[2;95mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[95mtest\033[0m \033[2;95mkey=\033[22mval\033[0m",
 		},
 	}
 )
