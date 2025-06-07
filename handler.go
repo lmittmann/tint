@@ -181,10 +181,10 @@ type handler struct {
 
 func (h *handler) clone() *handler {
 	return &handler{
-		mu:          h.mu,
 		attrsPrefix: h.attrsPrefix,
 		groupPrefix: h.groupPrefix,
 		groups:      h.groups,
+		mu:          h.mu, // mutex shared among all clones of this handler
 		w:           h.w,
 		opts:        h.opts,
 	}
