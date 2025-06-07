@@ -161,6 +161,7 @@ func NewHandler(w io.Writer, opts *Options) slog.Handler {
 	opts.setDefaults()
 
 	return &handler{
+		mu:   &sync.Mutex{},
 		w:    w,
 		opts: *opts,
 	}
@@ -172,7 +173,7 @@ type handler struct {
 	groupPrefix string
 	groups      []string
 
-	mu sync.Mutex
+	mu *sync.Mutex
 	w  io.Writer
 
 	opts Options
@@ -183,6 +184,7 @@ func (h *handler) clone() *handler {
 		attrsPrefix: h.attrsPrefix,
 		groupPrefix: h.groupPrefix,
 		groups:      h.groups,
+		mu:          h.mu, // mutex shared among all clones of this handler
 		w:           h.w,
 		opts:        h.opts,
 	}

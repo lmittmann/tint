@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -131,7 +132,7 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:132 test key=val`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:133 test key=val`,
 		},
 		{
 			Opts: &tint.Options{
@@ -408,7 +409,7 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[2;92mtint/handler_test.go:409\033[0m test",
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[2;92mtint/handler_test.go:410\033[0m test",
 		},
 		{
 			Opts: &tint.Options{
@@ -538,7 +539,7 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:539 test`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:540 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {
@@ -761,6 +762,26 @@ func TestAttr(t *testing.T) {
 			t.Fatalf("(-want +got)\n- %s\n+ %s", want, got)
 		}
 	})
+}
+
+// TestClonedHandlersSynchronizeWriter tests that cloned handlers synchronize writer
+// writes with each other such that a logger can be shared among multiple goroutines.
+func TestClonedHandlersSynchronizeWriter(t *testing.T) {
+	// logSomething calls `With(...)` and uses the resulting logger to create and use a cloned handler.
+	logSomething := func(wg *sync.WaitGroup, logger *slog.Logger, loggerID int) {
+		defer wg.Done()
+		logger = logger.With("withLoggerID", loggerID)
+		logger.Info("test")
+	}
+
+	logger := slog.New(tint.NewHandler(&bytes.Buffer{}, &tint.Options{}))
+
+	// start and wait for two goroutines
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go logSomething(&wg, logger, 1)
+	go logSomething(&wg, logger, 2)
+	wg.Wait()
 }
 
 // See https://github.com/golang/exp/blob/master/slog/benchmarks/benchmarks_test.go#L25

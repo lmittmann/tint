@@ -31,4 +31,4 @@ jobs:
         with:
           go-version: "1.21"
       - name: test
-        run: TZ="" go test ./... -tags=faketime
+        run: TZ="" go test ./... -race -tags=faketime
