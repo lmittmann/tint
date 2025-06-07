@@ -764,15 +764,14 @@ func TestAttr(t *testing.T) {
 	})
 }
 
-// TestClonedHandlersSynchronizeWriter tests that cloned handlers synchronize writer writes with each other
-// such that a logger can be shared among multiple goroutines.
+// TestClonedHandlersSynchronizeWriter tests that cloned handlers synchronize writer
+// writes with each other such that a logger can be shared among multiple goroutines.
 func TestClonedHandlersSynchronizeWriter(t *testing.T) {
-
 	// logSomething calls `With(...)` and uses the resulting logger to create and use a cloned handler.
-	logSomething := func(wg *sync.WaitGroup, logger *slog.Logger, loggerID string) {
+	logSomething := func(wg *sync.WaitGroup, logger *slog.Logger, loggerID int) {
 		defer wg.Done()
 		logger = logger.With("withLoggerID", loggerID)
-		logger.Info("test", "loggerID", loggerID)
+		logger.Info("test")
 	}
 
 	logger := slog.New(tint.NewHandler(&bytes.Buffer{}, &tint.Options{}))
@@ -780,8 +779,8 @@ func TestClonedHandlersSynchronizeWriter(t *testing.T) {
 	// start and wait for two goroutines
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go logSomething(&wg, logger, "1")
-	go logSomething(&wg, logger, "2")
+	go logSomething(&wg, logger, 1)
+	go logSomething(&wg, logger, 2)
 	wg.Wait()
 }
 
