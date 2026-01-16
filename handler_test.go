@@ -632,8 +632,8 @@ var (
 		},
 		{ // https://github.com/lmittmann/tint/issues/100
 			Opts: &tint.Options{
-				NoColor: false,
-				Level:   slog.LevelDebug,
+				NoColor:   false,
+				Level:     slog.LevelDebug,
 				AddSource: true,
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 					if a.Key == slog.LevelKey && len(groups) == 0 {
