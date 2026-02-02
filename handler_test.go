@@ -630,6 +630,24 @@ var (
 			},
 			Want: "\033[2;95mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[95mtest\033[0m \033[2;95mkey=\033[22mval\033[0m",
 		},
+		{ // https://github.com/lmittmann/tint/issues/100
+			Opts: &tint.Options{
+				NoColor:   false,
+				AddSource: true,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.LevelKey && len(groups) == 0 {
+						if lvl, ok := a.Value.Any().(slog.Level); ok && lvl == slog.LevelInfo {
+							return tint.Attr(13, a)
+						}
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l.Info("test")
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[2mtint/handler_test.go:647\033[0m test",
+		},
 	}
 )
 
