@@ -633,10 +633,11 @@ var (
 		{ // https://github.com/lmittmann/tint/issues/100
 			Opts: &tint.Options{
 				NoColor:   false,
+				Level:     slog.LevelDebug,
 				AddSource: true,
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 					if a.Key == slog.LevelKey && len(groups) == 0 {
-						if lvl, ok := a.Value.Any().(slog.Level); ok && lvl == slog.LevelInfo {
+						if _, ok := a.Value.Any().(slog.Level); ok {
 							return tint.Attr(13, a)
 						}
 					}
@@ -644,9 +645,9 @@ var (
 				},
 			},
 			F: func(l *slog.Logger) {
-				l.Info("test")
+				l.Debug("test")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[2mtint/handler_test.go:647\033[0m test",
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mDBG\033[0m \033[2mtint/handler_test.go:648\033[0m test",
 		},
 	}
 )
