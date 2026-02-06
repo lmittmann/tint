@@ -203,18 +203,20 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 
 	// write time
 	if !r.Time.IsZero() {
-		val := r.Time.Round(0) // strip monotonic to match Attr behavior
 		if rep == nil {
 			h.appendTintTime(buf, r.Time, -1)
 			buf.WriteByte(' ')
-		} else if a := rep(nil /* groups */, slog.Time(slog.TimeKey, val)); a.Key != "" {
-			val, color := h.resolve(a.Value)
-			if val.Kind() == slog.KindTime {
-				h.appendTintTime(buf, val.Time(), color)
-			} else {
-				h.appendTintValue(buf, val, false, color, true)
+		} else {
+			val := r.Time.Round(0) // strip monotonic to match Attr behavior
+			if a := rep(nil /* groups */, slog.Time(slog.TimeKey, val)); a.Key != "" {
+				val, color := h.resolve(a.Value)
+				if val.Kind() == slog.KindTime {
+					h.appendTintTime(buf, val.Time(), color)
+				} else {
+					h.appendTintValue(buf, val, false, color, true)
+				}
+				buf.WriteByte(' ')
 			}
-			buf.WriteByte(' ')
 		}
 	}
 
