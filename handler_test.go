@@ -3,6 +3,7 @@ package tint_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -132,7 +133,7 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:133 test key=val`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:134 test key=val`,
 		},
 		{
 			Opts: &tint.Options{
@@ -409,7 +410,7 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[2;92mtint/handler_test.go:410\033[0m test",
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[2;92mtint/handler_test.go:411\033[0m test",
 		},
 		{
 			Opts: &tint.Options{
@@ -539,7 +540,7 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:540 test`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:541 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {
@@ -647,7 +648,14 @@ var (
 			F: func(l *slog.Logger) {
 				l.Debug("test")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mDBG\033[0m \033[2mtint/handler_test.go:648\033[0m test",
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mDBG\033[0m \033[2mtint/handler_test.go:649\033[0m test",
+		},
+		{ // https://github.com/lmittmann/tint/pr/
+			Opts: &tint.Options{NoColor: true},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", json.RawMessage(`{"k":"v"}`))
+			},
+			Want: `Nov 10 23:00:00.000 INF test key="{\"k\":\"v\"}"`,
 		},
 	}
 )
@@ -705,6 +713,64 @@ func replace(new slog.Value, keys ...string) func([]string, slog.Attr) slog.Attr
 			}
 		}
 		return a
+	}
+}
+
+func TestHandler_Consistency(t *testing.T) {
+	if now := time.Now(); !faketime.Equal(now) || now.Location().String() != "UTC" {
+		t.Skip(`run: TZ="" go test -tags=faketime`)
+	}
+
+	tests := []struct {
+		Val any
+	}{
+		{"val"},
+		{123},
+		{123.456},
+		{true},
+		{false},
+		{nil},
+		{time.Now()},
+		{time.Now().In(time.UTC)},
+		{time.Duration(123456789 * time.Second)},
+		{errors.New("error")},
+		{tint.Err(errors.New("error"))},
+		{[]string{"a", "b", "c"}},
+		{map[string]int{"a": 1, "b": 2, "c": 3}},
+		{[]byte{0xc0, 0xfe}},
+		{[]byte("hello")},
+		{json.RawMessage(`{"k":"v"}`)},
+	}
+
+	// drop all attributes except "key"
+	rep := func(groups []string, a slog.Attr) slog.Attr {
+		if a.Key != "key" {
+			return slog.Attr{}
+		}
+		return a
+	}
+
+	for i, test := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			// log with tint.Handler
+			var tintBuf bytes.Buffer
+			tintLogger := slog.New(tint.NewHandler(&tintBuf, &tint.Options{
+				NoColor:     true,
+				ReplaceAttr: rep,
+			}))
+			tintLogger.Info("test", "key", test.Val)
+
+			// log with slog.TextHandler
+			var textBuf bytes.Buffer
+			textLogger := slog.New(slog.NewTextHandler(&textBuf, &slog.HandlerOptions{
+				ReplaceAttr: rep,
+			}))
+			textLogger.Info("test", "key", test.Val)
+
+			if textBuf.String() != tintBuf.String() {
+				t.Fatalf("(-want +got)\n- %s\n+ %s", textBuf.String(), tintBuf.String())
+			}
+		})
 	}
 }
 
