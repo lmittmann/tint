@@ -650,7 +650,7 @@ var (
 			},
 			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mDBG\033[0m \033[2mtint/handler_test.go:649\033[0m test",
 		},
-		{ // https://github.com/lmittmann/tint/pr/
+		{ // https://github.com/lmittmann/tint/pull/103
 			Opts: &tint.Options{NoColor: true},
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", json.RawMessage(`{"k":"v"}`))
@@ -721,25 +721,23 @@ func TestHandler_Consistency(t *testing.T) {
 		t.Skip(`run: TZ="" go test -tags=faketime`)
 	}
 
-	tests := []struct {
-		Val any
-	}{
-		{"val"},
-		{123},
-		{123.456},
-		{true},
-		{false},
-		{nil},
-		{time.Now()},
-		{time.Now().In(time.UTC)},
-		{time.Duration(123456789 * time.Second)},
-		{errors.New("error")},
-		{tint.Err(errors.New("error"))},
-		{[]string{"a", "b", "c"}},
-		{map[string]int{"a": 1, "b": 2, "c": 3}},
-		{[]byte{0xc0, 0xfe}},
-		{[]byte("hello")},
-		{json.RawMessage(`{"k":"v"}`)},
+	tests := []any{
+		"val",
+		123,
+		123.456,
+		true,
+		false,
+		nil,
+		time.Now(),
+		time.Now().In(time.UTC),
+		time.Duration(123456789 * time.Second),
+		errors.New("error"),
+		tint.Err(errors.New("error")),
+		[]string{"a", "b", "c"},
+		map[string]int{"a": 1, "b": 2, "c": 3},
+		[]byte{0xc0, 0xfe},
+		[]byte("hello"),
+		json.RawMessage(`{"k":"v"}`),
 	}
 
 	// drop all attributes except "key"
@@ -758,14 +756,14 @@ func TestHandler_Consistency(t *testing.T) {
 				NoColor:     true,
 				ReplaceAttr: rep,
 			}))
-			tintLogger.Info("test", "key", test.Val)
+			tintLogger.Info("test", "key", test)
 
 			// log with slog.TextHandler
 			var textBuf bytes.Buffer
 			textLogger := slog.New(slog.NewTextHandler(&textBuf, &slog.HandlerOptions{
 				ReplaceAttr: rep,
 			}))
-			textLogger.Info("test", "key", test.Val)
+			textLogger.Info("test", "key", test)
 
 			if textBuf.String() != tintBuf.String() {
 				t.Fatalf("(-want +got)\n- %s\n+ %s", textBuf.String(), tintBuf.String())
