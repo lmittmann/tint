@@ -498,8 +498,6 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 			appendSource(buf, cv)
 		default:
 			if bs, ok := byteSlice(cv); ok {
-				// Copied from log/slog/text_handler.go: byte slices are
-				// always quoted.
 				if quote {
 					*buf = strconv.AppendQuote(*buf, string(bs))
 				} else {

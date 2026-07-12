@@ -721,6 +721,10 @@ func TestHandler_Consistency(t *testing.T) {
 		t.Skip(`run: TZ="" go test -tags=faketime`)
 	}
 
+	// named byte slice and element types
+	type namedByteSlice []byte
+	type namedByte byte
+
 	tests := []any{
 		"val",
 		123,
@@ -737,6 +741,10 @@ func TestHandler_Consistency(t *testing.T) {
 		map[string]int{"a": 1, "b": 2, "c": 3},
 		[]byte{0xc0, 0xfe},
 		[]byte("hello"),
+		[]byte{},
+		[]byte(nil),
+		namedByteSlice("hello"),
+		[]namedByte("hello"),
 		json.RawMessage(`{"k":"v"}`),
 	}
 
