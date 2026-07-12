@@ -497,9 +497,36 @@ func (h *handler) appendValue(buf *buffer, v slog.Value, quote bool) {
 		case *slog.Source:
 			appendSource(buf, cv)
 		default:
+			if bs, ok := byteSlice(cv); ok {
+				// Copied from log/slog/text_handler.go: byte slices are
+				// always quoted.
+				if quote {
+					*buf = strconv.AppendQuote(*buf, string(bs))
+				} else {
+					buf.Write(bs)
+				}
+				break
+			}
 			appendString(buf, fmt.Sprintf("%+v", cv), quote, !h.opts.NoColor)
 		}
 	}
+}
+
+// byteSlice returns its argument as a []byte if the argument's
+// underlying type is []byte, along with a second return value of true.
+// Otherwise it returns nil, false.
+//
+// Copied from log/slog/text_handler.go.
+func byteSlice(a any) ([]byte, bool) {
+	if bs, ok := a.([]byte); ok {
+		return bs, true
+	}
+	// Like Printf's %s, we allow both the slice type and the byte element type to be named.
+	t := reflect.TypeOf(a)
+	if t != nil && t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Uint8 {
+		return reflect.ValueOf(a).Bytes(), true
+	}
+	return nil, false
 }
 
 func (h *handler) appendTintValue(buf *buffer, val slog.Value, quote bool, color int16, faint bool) {
