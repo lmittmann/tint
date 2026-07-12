@@ -98,7 +98,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test key=val`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"key": "val"
+  "key": "val"
 }`,
 		},
 		{
@@ -108,7 +108,7 @@ var (
 			Want: `Nov 10 23:00:00.000 ERR test err=fail`,
 			WantJSON: `Nov 10 23:00:00.000 ERR test
 {
-	"err": "fail"
+  "err": "fail"
 }`,
 		},
 		{
@@ -118,10 +118,10 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test group.key=val group.err=fail`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"group": {
-		"key": "val",
-		"err": "fail"
-	}
+  "group": {
+    "key": "val",
+    "err": "fail"
+  }
 }`,
 		},
 		{
@@ -131,9 +131,9 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test group.key=val`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"group": {
-		"key": "val"
-	}
+  "group": {
+    "key": "val"
+  }
 }`,
 		},
 		{
@@ -143,8 +143,8 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test key=val key2=val2`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"key": "val",
-	"key2": "val2"
+  "key": "val",
+  "key2": "val2"
 }`,
 		},
 		{
@@ -154,7 +154,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test "k e y"="v a l"`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"k e y": "v a l"
+  "k e y": "v a l"
 }`,
 		},
 		{
@@ -164,9 +164,9 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test "g r o u p.key"=val`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"g r o u p": {
-		"key": "val"
-	}
+  "g r o u p": {
+    "key": "val"
+  }
 }`,
 		},
 		{
@@ -176,8 +176,8 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test slice="[a b c]" map="map[a:1 b:2 c:3]"`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"slice": ["a","b","c"],
-	"map": {"a":1,"b":2,"c":3}
+  "slice": ["a","b","c"],
+  "map": {"a":1,"b":2,"c":3}
 }`,
 		},
 		{
@@ -191,7 +191,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:189 test key=val`,
 			WantJSON: `Nov 10 23:00:00.000 INF tint/handler_test.go:189 test
 {
-	"key": "val"
+  "key": "val"
 }`,
 		},
 		{
@@ -205,7 +205,7 @@ var (
 			Want: `11:00PM INF test key=val`,
 			WantJSON: `11:00PM INF test
 {
-	"key": "val"
+  "key": "val"
 }`,
 		},
 		{
@@ -219,7 +219,7 @@ var (
 			Want: `INF test key=val`,
 			WantJSON: `INF test
 {
-	"key": "val"
+  "key": "val"
 }`,
 		},
 		{
@@ -233,7 +233,7 @@ var (
 			Want: `Nov 10 23:00:00.000 test key=val`,
 			WantJSON: `Nov 10 23:00:00.000 test
 {
-	"key": "val"
+  "key": "val"
 }`,
 		},
 		{
@@ -247,7 +247,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF key=val`,
 			WantJSON: `Nov 10 23:00:00.000 INF
 {
-	"key": "val"
+  "key": "val"
 }`,
 		},
 		{
@@ -260,7 +260,7 @@ var (
 			},
 			Want: `key=val`,
 			WantJSON: `{
-	"key": "val"
+  "key": "val"
 }`,
 		},
 		{
@@ -285,10 +285,10 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test group.key=val group.key2=val2`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"group": {
-		"key": "val",
-		"key2": "val2"
-	}
+  "group": {
+    "key": "val",
+    "key2": "val2"
+  }
 }`,
 		},
 		{
@@ -307,9 +307,9 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test group.key2=val2`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"group": {
-		"key2": "val2"
-	}
+  "group": {
+    "key2": "val2"
+  }
 }`,
 		},
 		{
@@ -323,7 +323,7 @@ var (
 			Want: `42 INF test key=val`,
 			WantJSON: `42 INF test
 {
-	"key": "val"
+  "key": "val"
 }`,
 		},
 		{
@@ -337,7 +337,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INFO test key=val`,
 			WantJSON: `Nov 10 23:00:00.000 INFO test
 {
-	"key": "val"
+  "key": "val"
 }`,
 		},
 		{
@@ -351,7 +351,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF 42 key=val`,
 			WantJSON: `Nov 10 23:00:00.000 INF 42
 {
-	"key": "val"
+  "key": "val"
 }`,
 		},
 		{
@@ -365,8 +365,8 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test key=42 key2=val2`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"key": 42,
-	"key2": "val2"
+  "key": 42,
+  "key2": "val2"
 }`,
 		},
 		{
@@ -389,7 +389,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test key=""`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"key": ""
+  "key": ""
 }`,
 		},
 		{
@@ -399,7 +399,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test ""=val`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"": "val"
+  "": "val"
 }`,
 		},
 		{
@@ -409,7 +409,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test ""=""`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"": ""
+  "": ""
 }`,
 		},
 		{
@@ -436,7 +436,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test lvl=WARN`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"lvl": "WARN"
+  "lvl": "WARN"
 }`,
 		},
 		{
@@ -445,7 +445,7 @@ var (
 				l.Info("test", "lvl", slog.LevelWarn)
 			},
 			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mlvl=\033[0mWARN",
-			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n\t\033[2m\"lvl\":\033[0m \"WARN\"\n\033[2m}\033[0m",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2m\"lvl\":\033[0m \"WARN\"\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{
@@ -465,7 +465,7 @@ var (
 				l.Error("test", tint.Err(errors.New("fail")))
 			},
 			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[91mERR\033[0m test \033[2;91merr=\033[22mfail\033[0m",
-			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[91mERR\033[0m test\n\033[2m{\033[0m\n\t\033[2;91m\"err\":\033[22m \"fail\"\033[0m\n\033[2m}\033[0m",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[91mERR\033[0m test\n\033[2m{\033[0m\n  \033[2;91m\"err\":\033[22m \"fail\"\033[0m\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{NoColor: false},
@@ -473,7 +473,7 @@ var (
 				l.Info("test", tint.Attr(10, slog.String("key", "value")))
 			},
 			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;92mkey=\033[22mvalue\033[0m",
-			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n\t\033[2;92m\"key\":\033[22m \"value\"\033[0m\n\033[2m}\033[0m",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2;92m\"key\":\033[22m \"value\"\033[0m\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{NoColor: false},
@@ -481,7 +481,7 @@ var (
 				l.Info("test", tint.Attr(226, slog.String("key", "value")))
 			},
 			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;38;5;226mkey=\033[22mvalue\033[0m",
-			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n\t\033[2;38;5;226m\"key\":\033[22m \"value\"\033[0m\n\033[2m}\033[0m",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2;38;5;226m\"key\":\033[22m \"value\"\033[0m\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{
@@ -497,7 +497,7 @@ var (
 				l.Info("test", "key", "value")
 			},
 			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[92mtest\033[0m \033[2mkey=\033[0mvalue",
-			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[92mtest\033[0m\n\033[2m{\033[0m\n\t\033[2m\"key\":\033[0m \"value\"\n\033[2m}\033[0m",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[92mtest\033[0m\n\033[2m{\033[0m\n  \033[2m\"key\":\033[0m \"value\"\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{
@@ -513,7 +513,7 @@ var (
 				l.Info("test", "key", "value")
 			},
 			Want:     "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mkey=\033[0mvalue",
-			WantJSON: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n\t\033[2m\"key\":\033[0m \"value\"\n\033[2m}\033[0m",
+			WantJSON: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2m\"key\":\033[0m \"value\"\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{
@@ -529,7 +529,7 @@ var (
 				l.Info("test", "key", "value")
 			},
 			Want:     "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mkey=\033[0mvalue",
-			WantJSON: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n\t\033[2m\"key\":\033[0m \"value\"\n\033[2m}\033[0m",
+			WantJSON: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2m\"key\":\033[0m \"value\"\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{
@@ -616,7 +616,7 @@ var (
 			Want: `Nov 10 23:00:00.000 ERR test error=fail`,
 			WantJSON: `Nov 10 23:00:00.000 ERR test
 {
-	"error": "fail"
+  "error": "fail"
 }`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/15
@@ -626,7 +626,7 @@ var (
 			Want: `Nov 10 23:00:00.000 ERR test err=<nil>`,
 			WantJSON: `Nov 10 23:00:00.000 ERR test
 {
-	"err": null
+  "err": null
 }`,
 		},
 		{ // https://github.com/lmittmann/tint/pull/26
@@ -652,9 +652,9 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test a=b c=d e=f`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"a": "b",
-	"c": "d",
-	"e": "f"
+  "a": "b",
+  "c": "d",
+  "e": "f"
 }`,
 		},
 		{ // https://github.com/lmittmann/tint/pull/30
@@ -669,9 +669,9 @@ var (
 			},
 			Want: `group.key=val`,
 			WantJSON: `{
-	"group": {
-		"key": "val"
-	}
+  "group": {
+    "key": "val"
+  }
 }`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/36
@@ -712,9 +712,9 @@ var (
 			Want: `Nov 10 23:00:00.000 ERR test group.err=fail`,
 			WantJSON: `Nov 10 23:00:00.000 ERR test
 {
-	"group": {
-		"err": "fail"
-	}
+  "group": {
+    "err": "fail"
+  }
 }`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/55
@@ -727,7 +727,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test key="{A:123 B:<nil>}"`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"key": {"A":123,"B":null}
+  "key": {"A":123,"B":null}
 }`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/59
@@ -736,7 +736,7 @@ var (
 				l.Info("test", "color", "\033[92mgreen\033[0m")
 			},
 			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\033[92mgreen\033[0m",
-			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n\t\033[2m\"color\":\033[0m \"\033[92mgreen\033[0m\"\n\033[2m}\033[0m",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2m\"color\":\033[0m \"\033[92mgreen\033[0m\"\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{NoColor: false},
@@ -744,7 +744,7 @@ var (
 				l.Info("test", "color", "\033[92mgreen quoted\033[0m")
 			},
 			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\"\033[92mgreen quoted\033[0m\"",
-			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n\t\033[2m\"color\":\033[0m \"\033[92mgreen quoted\033[0m\"\n\033[2m}\033[0m",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2m\"color\":\033[0m \"\033[92mgreen quoted\033[0m\"\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{NoColor: true},
@@ -754,7 +754,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test color=green`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"color": "green"
+  "color": "green"
 }`,
 		},
 		{
@@ -765,7 +765,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test color="green quoted"`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"color": "green quoted"
+  "color": "green quoted"
 }`,
 		},
 		{ // https://github.com/lmittmann/tint/pull/66
@@ -777,7 +777,7 @@ var (
 			Want: `Nov 10 23:00:00.000 ERR test error=fail`,
 			WantJSON: `Nov 10 23:00:00.000 ERR test
 {
-	"error": "fail"
+  "error": "fail"
 }`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/85
@@ -788,7 +788,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test time=<nil>`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"time": null
+  "time": null
 }`,
 		},
 		{ // https://github.com/lmittmann/tint/pull/94
@@ -798,7 +798,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test time=2022-05-01T00:00:00.000Z`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"time": "2022-05-01T00:00:00Z"
+  "time": "2022-05-01T00:00:00Z"
 }`,
 		},
 		{ // https://github.com/lmittmann/tint/pull/96
@@ -812,7 +812,7 @@ var (
 				l.Info("test", tint.Attr(10, slog.String("key", "val")))
 			},
 			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;92mkey=\033[22mval\033[0m",
-			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n\t\033[2;92m\"key\":\033[22m \"val\"\033[0m\n\033[2m}\033[0m",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2;92m\"key\":\033[22m \"val\"\033[0m\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{
@@ -825,7 +825,7 @@ var (
 				l.Info("test", tint.Attr(10, slog.String("key", "val")))
 			},
 			Want:     "\033[2;95mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[95mtest\033[0m \033[2;95mkey=\033[22mval\033[0m",
-			WantJSON: "\033[2;95mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[95mtest\033[0m\n\033[2m{\033[0m\n\t\033[2;95m\"key\":\033[22m \"val\"\033[0m\n\033[2m}\033[0m",
+			WantJSON: "\033[2;95mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[95mtest\033[0m\n\033[2m{\033[0m\n  \033[2;95m\"key\":\033[22m \"val\"\033[0m\n\033[2m}\033[0m",
 		},
 		{ // https://github.com/lmittmann/tint/issues/100
 			Opts: &tint.Options{
@@ -855,7 +855,7 @@ var (
 			Want: `Nov 10 23:00:00.000 INF test key="{\"k\":\"v\"}"`,
 			WantJSON: `Nov 10 23:00:00.000 INF test
 {
-	"key": {"k":"v"}
+  "key": {"k":"v"}
 }`,
 		},
 	}

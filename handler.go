@@ -118,7 +118,7 @@ const (
 
 	errKey = "err"
 
-	// JSON separator (comma) tokens written after each attribute or group
+	jsonIndent  = "  "
 	jsonSep     = ","
 	jsonTintSep = ansiFaint + "," + ansiReset
 
@@ -1038,7 +1038,7 @@ func appendEscapedJSONString(buf []byte, s string) []byte {
 
 func appendTabs(buf *buffer, n int) {
 	for i := 0; i < n; i++ {
-		buf.WriteByte('\t')
+		buf.WriteString(jsonIndent)
 	}
 }
 
