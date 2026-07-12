@@ -179,9 +179,12 @@ func NewHandler(w io.Writer, opts *Options) slog.Handler {
 
 // handler implements a [slog.Handler].
 type handler struct {
+	json bool // true => output JSON; false => output text
+
 	attrsPrefix string
 	groupPrefix string
 	groups      []string
+	nOpenGroups int // number of groups opened in attrsPrefix (json only)
 
 	mu *sync.Mutex
 	w  io.Writer
@@ -191,9 +194,11 @@ type handler struct {
 
 func (h *handler) clone() *handler {
 	return &handler{
+		json:        h.json,
 		attrsPrefix: h.attrsPrefix,
 		groupPrefix: h.groupPrefix,
 		groups:      h.groups,
+		nOpenGroups: h.nOpenGroups,
 		mu:          h.mu, // mutex shared among all clones of this handler
 		w:           h.w,
 		opts:        h.opts,
@@ -286,16 +291,21 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		buf.WriteByte(' ')
 	}
 
-	// write handler attributes
-	if len(h.attrsPrefix) > 0 {
-		buf.WriteString(h.attrsPrefix)
-	}
+	if h.json {
+		// write handler and record attributes as pretty JSON
+		h.appendJSONAttrs(buf, r)
+	} else {
+		// write handler attributes
+		if len(h.attrsPrefix) > 0 {
+			buf.WriteString(h.attrsPrefix)
+		}
 
-	// write attributes
-	r.Attrs(func(attr slog.Attr) bool {
-		h.appendAttr(buf, attr, h.groupPrefix, h.groups)
-		return true
-	})
+		// write attributes
+		r.Attrs(func(attr slog.Attr) bool {
+			h.appendAttr(buf, attr, h.groupPrefix, h.groups)
+			return true
+		})
+	}
 
 	if len(*buf) == 0 {
 		buf.WriteByte('\n')
@@ -320,8 +330,12 @@ func (h *handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	defer buf.Free()
 
 	// write attributes to buffer
-	for _, attr := range attrs {
-		h.appendAttr(buf, attr, h.groupPrefix, h.groups)
+	if h.json {
+		h2.nOpenGroups = h.appendJSONAttrsPrefix(buf, attrs)
+	} else {
+		for _, attr := range attrs {
+			h.appendAttr(buf, attr, h.groupPrefix, h.groups)
+		}
 	}
 	h2.attrsPrefix = h.attrsPrefix + string(*buf)
 	return h2
@@ -430,10 +444,19 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 		if attr.Key != "" {
 			groupsPrefix += attr.Key + "."
 			groups = append(groups, attr.Key)
+			if h.json {
+				h.appendJSONGroupAttr(buf, attr, groups)
+				return
+			}
 		}
 		for _, groupAttr := range attr.Value.Group() {
 			h.appendAttr(buf, groupAttr, groupsPrefix, groups)
 		}
+		return
+	}
+
+	if h.json {
+		h.appendJSONAttr(buf, attr, color, len(groups)+1)
 		return
 	}
 
