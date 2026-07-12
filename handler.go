@@ -17,7 +17,7 @@ Create a new logger with a custom TRACE level:
 	const LevelTrace = slog.LevelDebug - 4
 
 	w := os.Stderr
-	logger := slog.New(tint.NewHandler(w, &tint.Options{
+	logger := slog.New(tint.NewTextHandler(w, &tint.Options{
 		Level: LevelTrace,
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			if a.Key == slog.LevelKey && len(groups) == 0 {
@@ -34,7 +34,7 @@ Create a new logger that doesn't write the time:
 
 	w := os.Stderr
 	logger := slog.New(
-		tint.NewHandler(w, &tint.Options{
+		tint.NewTextHandler(w, &tint.Options{
 			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 				if a.Key == slog.TimeKey && len(groups) == 0 {
 					return slog.Attr{}
@@ -48,7 +48,7 @@ Create a new logger that writes all errors in red:
 
 	w := os.Stderr
 	logger := slog.New(
-		tint.NewHandler(w, &tint.Options{
+		tint.NewTextHandler(w, &tint.Options{
 			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 				if a.Value.Kind() == slog.KindAny {
 					if _, ok := a.Value.Any().(error); ok {
@@ -68,7 +68,7 @@ e.g., the [go-isatty] package:
 
 	w := os.Stderr
 	logger := slog.New(
-		tint.NewHandler(w, &tint.Options{
+		tint.NewTextHandler(w, &tint.Options{
 			NoColor: !isatty.IsTerminal(w.Fd()),
 		}),
 	)
@@ -79,7 +79,7 @@ Color support on Windows can be added by using e.g., the [go-colorable] package:
 
 	w := os.Stderr
 	logger := slog.New(
-		tint.NewHandler(colorable.NewColorable(w), nil),
+		tint.NewTextHandler(colorable.NewColorable(w), nil),
 	)
 
 [zerolog.ConsoleWriter]: https://pkg.go.dev/github.com/rs/zerolog#ConsoleWriter
@@ -152,9 +152,9 @@ func (o *Options) setDefaults() {
 	}
 }
 
-// NewHandler creates a [slog.Handler] that writes tinted logs to Writer w,
+// NewTextHandler creates a [slog.Handler] that writes tinted logs to Writer w,
 // using the default options. If opts is nil, the default options are used.
-func NewHandler(w io.Writer, opts *Options) slog.Handler {
+func NewTextHandler(w io.Writer, opts *Options) slog.Handler {
 	if opts == nil {
 		opts = &Options{}
 	}
@@ -165,6 +165,16 @@ func NewHandler(w io.Writer, opts *Options) slog.Handler {
 		w:    w,
 		opts: *opts,
 	}
+}
+
+// NewHandler creates a [slog.Handler] that writes tinted logs to Writer w,
+// using the default options. If opts is nil, the default options are used.
+//
+// Deprecated: Use [NewTextHandler] instead.
+//
+//go:fix inline
+func NewHandler(w io.Writer, opts *Options) slog.Handler {
+	return NewTextHandler(w, opts)
 }
 
 // handler implements a [slog.Handler].
