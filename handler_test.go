@@ -69,61 +69,116 @@ func Example_traceLevel() {
 	// Output:
 }
 
+func Example_json() {
+	w := os.Stderr
+	logger := slog.New(tint.NewJSONHandler(w, &tint.Options{
+		Level:      slog.LevelDebug,
+		TimeFormat: time.Kitchen,
+	}))
+	logger.Info("Starting server", "addr", ":8080", "env", "production")
+	logger.Debug("Connected to DB", "db", "myapp", "host", "localhost:5432")
+	logger.Warn("Slow request", "method", "GET", "path", "/users", "duration", 497*time.Millisecond)
+	logger.Error("DB connection lost", tint.Err(errors.New("connection reset")), "db", "myapp")
+	// Output:
+}
+
 var (
 	faketime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 
 	handlerTests = []struct {
-		Opts *tint.Options
-		F    func(l *slog.Logger)
-		Want string
+		Opts     *tint.Options
+		F        func(l *slog.Logger)
+		Want     string
+		WantJSON string // the expected json output for the test case
 	}{
 		{
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
 			Want: `Nov 10 23:00:00.000 INF test key=val`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "key": "val"
+}`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.Error("test", tint.Err(errors.New("fail")))
 			},
 			Want: `Nov 10 23:00:00.000 ERR test err=fail`,
+			WantJSON: `Nov 10 23:00:00.000 ERR test
+{
+  "err": "fail"
+}`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.Info("test", slog.Group("group", slog.String("key", "val"), tint.Err(errors.New("fail"))))
 			},
 			Want: `Nov 10 23:00:00.000 INF test group.key=val group.err=fail`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "group": {
+    "key": "val",
+    "err": "fail"
+  }
+}`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.WithGroup("group").Info("test", "key", "val")
 			},
 			Want: `Nov 10 23:00:00.000 INF test group.key=val`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "group": {
+    "key": "val"
+  }
+}`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.With("key", "val").Info("test", "key2", "val2")
 			},
 			Want: `Nov 10 23:00:00.000 INF test key=val key2=val2`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "key": "val",
+  "key2": "val2"
+}`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.Info("test", "k e y", "v a l")
 			},
 			Want: `Nov 10 23:00:00.000 INF test "k e y"="v a l"`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "k e y": "v a l"
+}`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.WithGroup("g r o u p").Info("test", "key", "val")
 			},
 			Want: `Nov 10 23:00:00.000 INF test "g r o u p.key"=val`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "g r o u p": {
+    "key": "val"
+  }
+}`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.Info("test", "slice", []string{"a", "b", "c"}, "map", map[string]int{"a": 1, "b": 2, "c": 3})
 			},
 			Want: `Nov 10 23:00:00.000 INF test slice="[a b c]" map="map[a:1 b:2 c:3]"`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "slice": ["a","b","c"],
+  "map": {"a":1,"b":2,"c":3}
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -133,7 +188,11 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:134 test key=val`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:189 test key=val`,
+			WantJSON: `Nov 10 23:00:00.000 INF tint/handler_test.go:189 test
+{
+  "key": "val"
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -144,6 +203,10 @@ var (
 				l.Info("test", "key", "val")
 			},
 			Want: `11:00PM INF test key=val`,
+			WantJSON: `11:00PM INF test
+{
+  "key": "val"
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -154,6 +217,10 @@ var (
 				l.Info("test", "key", "val")
 			},
 			Want: `INF test key=val`,
+			WantJSON: `INF test
+{
+  "key": "val"
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -164,6 +231,10 @@ var (
 				l.Info("test", "key", "val")
 			},
 			Want: `Nov 10 23:00:00.000 test key=val`,
+			WantJSON: `Nov 10 23:00:00.000 test
+{
+  "key": "val"
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -174,6 +245,10 @@ var (
 				l.Info("test", "key", "val")
 			},
 			Want: `Nov 10 23:00:00.000 INF key=val`,
+			WantJSON: `Nov 10 23:00:00.000 INF
+{
+  "key": "val"
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -184,6 +259,9 @@ var (
 				l.Info("test", "key", "val")
 			},
 			Want: `key=val`,
+			WantJSON: `{
+  "key": "val"
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -193,7 +271,8 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: `Nov 10 23:00:00.000 INF test`,
+			Want:     `Nov 10 23:00:00.000 INF test`,
+			WantJSON: `Nov 10 23:00:00.000 INF test`,
 		},
 		{
 			Opts: &tint.Options{
@@ -204,6 +283,13 @@ var (
 				l.WithGroup("group").Info("test", "key", "val", "key2", "val2")
 			},
 			Want: `Nov 10 23:00:00.000 INF test group.key=val group.key2=val2`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "group": {
+    "key": "val",
+    "key2": "val2"
+  }
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -219,6 +305,12 @@ var (
 				l.WithGroup("group").Info("test", "key", "val", "key2", "val2")
 			},
 			Want: `Nov 10 23:00:00.000 INF test group.key2=val2`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "group": {
+    "key2": "val2"
+  }
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -229,6 +321,10 @@ var (
 				l.Info("test", "key", "val")
 			},
 			Want: `42 INF test key=val`,
+			WantJSON: `42 INF test
+{
+  "key": "val"
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -239,6 +335,10 @@ var (
 				l.Info("test", "key", "val")
 			},
 			Want: `Nov 10 23:00:00.000 INFO test key=val`,
+			WantJSON: `Nov 10 23:00:00.000 INFO test
+{
+  "key": "val"
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -249,6 +349,10 @@ var (
 				l.Info("test", "key", "val")
 			},
 			Want: `Nov 10 23:00:00.000 INF 42 key=val`,
+			WantJSON: `Nov 10 23:00:00.000 INF 42
+{
+  "key": "val"
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -259,6 +363,11 @@ var (
 				l.With("key", "val").Info("test", "key2", "val2")
 			},
 			Want: `Nov 10 23:00:00.000 INF test key=42 key2=val2`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "key": 42,
+  "key2": "val2"
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -270,25 +379,38 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "val")
 			},
-			Want: ``,
+			Want:     ``,
+			WantJSON: ``,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "")
 			},
 			Want: `Nov 10 23:00:00.000 INF test key=""`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "key": ""
+}`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.Info("test", "", "val")
 			},
 			Want: `Nov 10 23:00:00.000 INF test ""=val`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "": "val"
+}`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.Info("test", "", "")
 			},
 			Want: `Nov 10 23:00:00.000 INF test ""=""`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "": ""
+}`,
 		},
 		{
 			Opts: &tint.Options{
@@ -304,20 +426,26 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `2009-11-11 INF test`,
+			Want:     `2009-11-11 INF test`,
+			WantJSON: `2009-11-11 INF test`,
 		},
 		{
 			F: func(l *slog.Logger) {
 				l.Info("test", "lvl", slog.LevelWarn)
 			},
 			Want: `Nov 10 23:00:00.000 INF test lvl=WARN`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "lvl": "WARN"
+}`,
 		},
 		{
 			Opts: &tint.Options{NoColor: false},
 			F: func(l *slog.Logger) {
 				l.Info("test", "lvl", slog.LevelWarn)
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mlvl=\033[0mWARN",
+			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mlvl=\033[0mWARN",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2m\"lvl\":\033[0m \"WARN\"\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{
@@ -328,28 +456,32 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: "\033[2;95mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[95mtest\033[0m",
+			Want:     "\033[2;95mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[95mtest\033[0m",
+			WantJSON: "\033[2;95mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[95mtest\033[0m",
 		},
 		{
 			Opts: &tint.Options{NoColor: false},
 			F: func(l *slog.Logger) {
 				l.Error("test", tint.Err(errors.New("fail")))
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[91mERR\033[0m test \033[2;91merr=\033[22mfail\033[0m",
+			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[91mERR\033[0m test \033[2;91merr=\033[22mfail\033[0m",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[91mERR\033[0m test\n\033[2m{\033[0m\n  \033[2;91m\"err\":\033[22m \"fail\"\033[0m\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{NoColor: false},
 			F: func(l *slog.Logger) {
 				l.Info("test", tint.Attr(10, slog.String("key", "value")))
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;92mkey=\033[22mvalue\033[0m",
+			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;92mkey=\033[22mvalue\033[0m",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2;92m\"key\":\033[22m \"value\"\033[0m\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{NoColor: false},
 			F: func(l *slog.Logger) {
 				l.Info("test", tint.Attr(226, slog.String("key", "value")))
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;38;5;226mkey=\033[22mvalue\033[0m",
+			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;38;5;226mkey=\033[22mvalue\033[0m",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2;38;5;226m\"key\":\033[22m \"value\"\033[0m\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{
@@ -364,7 +496,8 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "value")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[92mtest\033[0m \033[2mkey=\033[0mvalue",
+			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[92mtest\033[0m \033[2mkey=\033[0mvalue",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[92mtest\033[0m\n\033[2m{\033[0m\n  \033[2m\"key\":\033[0m \"value\"\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{
@@ -379,7 +512,8 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "value")
 			},
-			Want: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mkey=\033[0mvalue",
+			Want:     "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mkey=\033[0mvalue",
+			WantJSON: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2m\"key\":\033[0m \"value\"\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{
@@ -394,7 +528,8 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test", "key", "value")
 			},
-			Want: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mkey=\033[0mvalue",
+			Want:     "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mkey=\033[0mvalue",
+			WantJSON: "\033[2;92mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2m\"key\":\033[0m \"value\"\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{
@@ -410,7 +545,8 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[2;92mtint/handler_test.go:411\033[0m test",
+			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[2;92mtint/handler_test.go:546\033[0m test",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[2;92mtint/handler_test.go:546\033[0m test",
 		},
 		{
 			Opts: &tint.Options{
@@ -430,7 +566,8 @@ var (
 				const levelTrace = slog.LevelDebug - 4
 				l.Log(context.TODO(), levelTrace, "test")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m TRC test",
+			Want:     "\033[2mNov 10 23:00:00.000\033[0m TRC test",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m TRC test",
 		},
 		{
 			Opts: &tint.Options{
@@ -450,14 +587,16 @@ var (
 				const levelTrace = slog.LevelDebug - 4
 				l.Log(context.TODO(), levelTrace, "test")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mTRC\033[0m test",
+			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[95mTRC\033[0m test",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[95mTRC\033[0m test",
 		},
 
 		{ // https://github.com/lmittmann/tint/issues/8
 			F: func(l *slog.Logger) {
 				l.Log(context.TODO(), slog.LevelInfo+1, "test")
 			},
-			Want: `Nov 10 23:00:00.000 INF+1 test`,
+			Want:     `Nov 10 23:00:00.000 INF+1 test`,
+			WantJSON: `Nov 10 23:00:00.000 INF+1 test`,
 		},
 		{
 			Opts: &tint.Options{
@@ -467,19 +606,28 @@ var (
 			F: func(l *slog.Logger) {
 				l.Log(context.TODO(), slog.LevelDebug-1, "test")
 			},
-			Want: `Nov 10 23:00:00.000 DBG-1 test`,
+			Want:     `Nov 10 23:00:00.000 DBG-1 test`,
+			WantJSON: `Nov 10 23:00:00.000 DBG-1 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/12
 			F: func(l *slog.Logger) {
 				l.Error("test", slog.Any("error", errors.New("fail")))
 			},
 			Want: `Nov 10 23:00:00.000 ERR test error=fail`,
+			WantJSON: `Nov 10 23:00:00.000 ERR test
+{
+  "error": "fail"
+}`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/15
 			F: func(l *slog.Logger) {
 				l.Error("test", tint.Err(nil))
 			},
 			Want: `Nov 10 23:00:00.000 ERR test err=<nil>`,
+			WantJSON: `Nov 10 23:00:00.000 ERR test
+{
+  "err": null
+}`,
 		},
 		{ // https://github.com/lmittmann/tint/pull/26
 			Opts: &tint.Options{
@@ -494,13 +642,20 @@ var (
 			F: func(l *slog.Logger) {
 				l.Error("test")
 			},
-			Want: `Nov 11 23:00:00.000 ERR test`,
+			Want:     `Nov 11 23:00:00.000 ERR test`,
+			WantJSON: `Nov 11 23:00:00.000 ERR test`,
 		},
 		{ // https://github.com/lmittmann/tint/pull/27
 			F: func(l *slog.Logger) {
 				l.Info("test", "a", "b", slog.Group("", slog.String("c", "d")), "e", "f")
 			},
 			Want: `Nov 10 23:00:00.000 INF test a=b c=d e=f`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "a": "b",
+  "c": "d",
+  "e": "f"
+}`,
 		},
 		{ // https://github.com/lmittmann/tint/pull/30
 			// drop built-in attributes in a grouped log
@@ -513,6 +668,11 @@ var (
 				l.WithGroup("group").Info("test", "key", "val")
 			},
 			Want: `group.key=val`,
+			WantJSON: `{
+  "group": {
+    "key": "val"
+  }
+}`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/36
 			Opts: &tint.Options{
@@ -527,7 +687,8 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF test`,
+			Want:     `Nov 10 23:00:00.000 INF test`,
+			WantJSON: `Nov 10 23:00:00.000 INF test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/37
 			Opts: &tint.Options{
@@ -540,7 +701,8 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:541 test`,
+			Want:     `Nov 10 23:00:00.000 INF tint/handler_test.go:702 test`,
+			WantJSON: `Nov 10 23:00:00.000 INF tint/handler_test.go:702 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {
@@ -548,6 +710,12 @@ var (
 				l.Error("test", tint.Err(errTest))
 			},
 			Want: `Nov 10 23:00:00.000 ERR test group.err=fail`,
+			WantJSON: `Nov 10 23:00:00.000 ERR test
+{
+  "group": {
+    "err": "fail"
+  }
+}`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/55
 			F: func(l *slog.Logger) {
@@ -557,20 +725,26 @@ var (
 				}{A: 123})
 			},
 			Want: `Nov 10 23:00:00.000 INF test key="{A:123 B:<nil>}"`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "key": {"A":123,"B":null}
+}`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/59
 			Opts: &tint.Options{NoColor: false},
 			F: func(l *slog.Logger) {
 				l.Info("test", "color", "\033[92mgreen\033[0m")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\033[92mgreen\033[0m",
+			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\033[92mgreen\033[0m",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2m\"color\":\033[0m \"\033[92mgreen\033[0m\"\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{NoColor: false},
 			F: func(l *slog.Logger) {
 				l.Info("test", "color", "\033[92mgreen quoted\033[0m")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\"\033[92mgreen quoted\033[0m\"",
+			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2mcolor=\033[0m\"\033[92mgreen quoted\033[0m\"",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2m\"color\":\033[0m \"\033[92mgreen quoted\033[0m\"\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{NoColor: true},
@@ -578,6 +752,10 @@ var (
 				l.Info("test", "color", "\033[92mgreen\033[0m")
 			},
 			Want: `Nov 10 23:00:00.000 INF test color=green`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "color": "green"
+}`,
 		},
 		{
 			Opts: &tint.Options{NoColor: true},
@@ -585,6 +763,10 @@ var (
 				l.Info("test", "color", "\033[92mgreen quoted\033[0m")
 			},
 			Want: `Nov 10 23:00:00.000 INF test color="green quoted"`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "color": "green quoted"
+}`,
 		},
 		{ // https://github.com/lmittmann/tint/pull/66
 			F: func(l *slog.Logger) {
@@ -593,6 +775,10 @@ var (
 				l.Error("test", errAttr)
 			},
 			Want: `Nov 10 23:00:00.000 ERR test error=fail`,
+			WantJSON: `Nov 10 23:00:00.000 ERR test
+{
+  "error": "fail"
+}`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/85
 			F: func(l *slog.Logger) {
@@ -600,12 +786,20 @@ var (
 				l.Info("test", "time", t)
 			},
 			Want: `Nov 10 23:00:00.000 INF test time=<nil>`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "time": null
+}`,
 		},
 		{ // https://github.com/lmittmann/tint/pull/94
 			F: func(l *slog.Logger) {
 				l.Info("test", "time", testTime)
 			},
 			Want: `Nov 10 23:00:00.000 INF test time=2022-05-01T00:00:00.000Z`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "time": "2022-05-01T00:00:00Z"
+}`,
 		},
 		{ // https://github.com/lmittmann/tint/pull/96
 			Opts: &tint.Options{
@@ -617,7 +811,8 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test", tint.Attr(10, slog.String("key", "val")))
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;92mkey=\033[22mval\033[0m",
+			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;92mkey=\033[22mval\033[0m",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test\n\033[2m{\033[0m\n  \033[2;92m\"key\":\033[22m \"val\"\033[0m\n\033[2m}\033[0m",
 		},
 		{
 			Opts: &tint.Options{
@@ -629,7 +824,8 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test", tint.Attr(10, slog.String("key", "val")))
 			},
-			Want: "\033[2;95mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[95mtest\033[0m \033[2;95mkey=\033[22mval\033[0m",
+			Want:     "\033[2;95mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[95mtest\033[0m \033[2;95mkey=\033[22mval\033[0m",
+			WantJSON: "\033[2;95mNov 10 23:00:00.000\033[0m \033[95mINF\033[0m \033[95mtest\033[0m\n\033[2m{\033[0m\n  \033[2;95m\"key\":\033[22m \"val\"\033[0m\n\033[2m}\033[0m",
 		},
 		{ // https://github.com/lmittmann/tint/issues/100
 			Opts: &tint.Options{
@@ -648,7 +844,8 @@ var (
 			F: func(l *slog.Logger) {
 				l.Debug("test")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mDBG\033[0m \033[2mtint/handler_test.go:649\033[0m test",
+			Want:     "\033[2mNov 10 23:00:00.000\033[0m \033[95mDBG\033[0m \033[2mtint/handler_test.go:845\033[0m test",
+			WantJSON: "\033[2mNov 10 23:00:00.000\033[0m \033[95mDBG\033[0m \033[2mtint/handler_test.go:845\033[0m test",
 		},
 		{ // https://github.com/lmittmann/tint/pull/103
 			Opts: &tint.Options{NoColor: true},
@@ -656,11 +853,15 @@ var (
 				l.Info("test", "key", json.RawMessage(`{"k":"v"}`))
 			},
 			Want: `Nov 10 23:00:00.000 INF test key="{\"k\":\"v\"}"`,
+			WantJSON: `Nov 10 23:00:00.000 INF test
+{
+  "key": {"k":"v"}
+}`,
 		},
 	}
 )
 
-func TestHandler(t *testing.T) {
+func TestTextHandler(t *testing.T) {
 	if now := time.Now(); !faketime.Equal(now) || now.Location().String() != "UTC" {
 		t.Skip(`run: TZ="" go test -tags=faketime`)
 	}
@@ -680,6 +881,31 @@ func TestHandler(t *testing.T) {
 			}
 			if test.Want != got {
 				t.Fatalf("(-want +got)\n- %s\n+ %s", test.Want, got)
+			}
+		})
+	}
+}
+
+func TestJSONHandler(t *testing.T) {
+	if now := time.Now(); !faketime.Equal(now) || now.Location().String() != "UTC" {
+		t.Skip(`run: TZ="" go test -tags=faketime`)
+	}
+
+	for i, test := range handlerTests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			var buf bytes.Buffer
+			if test.Opts == nil {
+				test.Opts = &tint.Options{NoColor: true}
+			}
+			l := slog.New(tint.NewJSONHandler(&buf, test.Opts))
+			test.F(l)
+
+			got, foundNewline := strings.CutSuffix(buf.String(), "\n")
+			if !foundNewline {
+				t.Fatalf("missing newline")
+			}
+			if test.WantJSON != got {
+				t.Fatalf("(-want +got)\n- %s\n+ %s", test.WantJSON, got)
 			}
 		})
 	}
@@ -716,7 +942,7 @@ func replace(new slog.Value, keys ...string) func([]string, slog.Attr) slog.Attr
 	}
 }
 
-func TestHandler_Consistency(t *testing.T) {
+func TestSlogParity(t *testing.T) {
 	if now := time.Now(); !faketime.Equal(now) || now.Location().String() != "UTC" {
 		t.Skip(`run: TZ="" go test -tags=faketime`)
 	}
@@ -756,28 +982,62 @@ func TestHandler_Consistency(t *testing.T) {
 		return a
 	}
 
-	for i, test := range tests {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			// log with tint.Handler
-			var tintBuf bytes.Buffer
-			tintLogger := slog.New(tint.NewTextHandler(&tintBuf, &tint.Options{
-				NoColor:     true,
-				ReplaceAttr: rep,
-			}))
-			tintLogger.Info("test", "key", test)
+	t.Run("text", func(t *testing.T) {
+		for i, test := range tests {
+			t.Run(strconv.Itoa(i), func(t *testing.T) {
+				// log with tint text handler
+				var tintBuf bytes.Buffer
+				tintLogger := slog.New(tint.NewTextHandler(&tintBuf, &tint.Options{
+					NoColor:     true,
+					ReplaceAttr: rep,
+				}))
+				tintLogger.Info("test", "key", test)
 
-			// log with slog.TextHandler
-			var textBuf bytes.Buffer
-			textLogger := slog.New(slog.NewTextHandler(&textBuf, &slog.HandlerOptions{
-				ReplaceAttr: rep,
-			}))
-			textLogger.Info("test", "key", test)
+				// log with slog.TextHandler
+				var textBuf bytes.Buffer
+				textLogger := slog.New(slog.NewTextHandler(&textBuf, &slog.HandlerOptions{
+					ReplaceAttr: rep,
+				}))
+				textLogger.Info("test", "key", test)
 
-			if textBuf.String() != tintBuf.String() {
-				t.Fatalf("(-want +got)\n- %s\n+ %s", textBuf.String(), tintBuf.String())
-			}
-		})
-	}
+				if textBuf.String() != tintBuf.String() {
+					t.Fatalf("(-want +got)\n- %s\n+ %s", textBuf.String(), tintBuf.String())
+				}
+			})
+		}
+	})
+
+	t.Run("json", func(t *testing.T) {
+		for i, test := range tests {
+			t.Run(strconv.Itoa(i), func(t *testing.T) {
+				// log with tint JSON handler
+				var tintBuf bytes.Buffer
+				tintLogger := slog.New(tint.NewJSONHandler(&tintBuf, &tint.Options{
+					NoColor:     true,
+					ReplaceAttr: rep,
+				}))
+				tintLogger.Info("test", "key", test)
+
+				// log with slog.JSONHandler
+				var jsonBuf bytes.Buffer
+				jsonLogger := slog.New(slog.NewJSONHandler(&jsonBuf, &slog.HandlerOptions{
+					ReplaceAttr: rep,
+				}))
+				jsonLogger.Info("test", "key", test)
+
+				// compact the pretty JSON output before comparing
+				var compactBuf bytes.Buffer
+				if err := json.Compact(&compactBuf, tintBuf.Bytes()); err != nil {
+					t.Fatalf("invalid JSON output %q: %v", tintBuf.String(), err)
+				}
+				compactBuf.WriteByte('\n')
+
+				if jsonBuf.String() != compactBuf.String() {
+					t.Fatalf("(-want +got)\n- %s\n+ %s", jsonBuf.String(), compactBuf.String())
+				}
+			})
+		}
+	})
 }
 
 func TestReplaceAttr(t *testing.T) {
@@ -885,10 +1145,11 @@ func BenchmarkLogAttrs(b *testing.B) {
 		Name string
 		H    slog.Handler
 	}{
-		{"tint", tint.NewTextHandler(io.Discard, nil)},
+		{"tint-text", tint.NewTextHandler(io.Discard, nil)},
+		{"tint-json", tint.NewJSONHandler(io.Discard, nil)},
 		{"text", slog.NewTextHandler(io.Discard, nil)},
 		{"json", slog.NewJSONHandler(io.Discard, nil)},
-		{"discard", new(discarder)},
+		{"discard", discardHandler{}},
 	}
 
 	benchmarks := []struct {
@@ -1017,12 +1278,12 @@ func BenchmarkLogAttrs(b *testing.B) {
 }
 
 // discarder is a slog.Handler that discards all records.
-type discarder struct{}
+type discardHandler struct{}
 
-func (*discarder) Enabled(context.Context, slog.Level) bool   { return true }
-func (*discarder) Handle(context.Context, slog.Record) error  { return nil }
-func (d *discarder) WithAttrs(attrs []slog.Attr) slog.Handler { return d }
-func (d *discarder) WithGroup(name string) slog.Handler       { return d }
+func (dh discardHandler) Enabled(context.Context, slog.Level) bool  { return false }
+func (dh discardHandler) Handle(context.Context, slog.Record) error { return nil }
+func (dh discardHandler) WithAttrs(attrs []slog.Attr) slog.Handler  { return dh }
+func (dh discardHandler) WithGroup(name string) slog.Handler        { return dh }
 
 var (
 	testMessage  = "Test logging, but use a somewhat realistic message length."
