@@ -31,19 +31,6 @@ func Example() {
 	// Output:
 }
 
-func Example_json() {
-	w := os.Stderr
-	logger := slog.New(tint.NewJSONHandler(w, &tint.Options{
-		Level:      slog.LevelDebug,
-		TimeFormat: time.Kitchen,
-	}))
-	logger.Info("Starting server", "addr", ":8080", "env", "production")
-	logger.Debug("Connected to DB", "db", "myapp", "host", "localhost:5432")
-	logger.Warn("Slow request", "method", "GET", "path", "/users", "duration", 497*time.Millisecond)
-	logger.Error("DB connection lost", tint.Err(errors.New("connection reset")), "db", "myapp")
-	// Output:
-}
-
 // Create a new logger that writes all errors in red:
 func Example_redErrors() {
 	w := os.Stderr
@@ -79,6 +66,19 @@ func Example_traceLevel() {
 		},
 	}))
 	logger.Log(context.Background(), LevelTrace, "DB query", "query", "SELECT * FROM users", "duration", 543*time.Microsecond)
+	// Output:
+}
+
+func Example_json() {
+	w := os.Stderr
+	logger := slog.New(tint.NewJSONHandler(w, &tint.Options{
+		Level:      slog.LevelDebug,
+		TimeFormat: time.Kitchen,
+	}))
+	logger.Info("Starting server", "addr", ":8080", "env", "production")
+	logger.Debug("Connected to DB", "db", "myapp", "host", "localhost:5432")
+	logger.Warn("Slow request", "method", "GET", "path", "/users", "duration", 497*time.Millisecond)
+	logger.Error("DB connection lost", tint.Err(errors.New("connection reset")), "db", "myapp")
 	// Output:
 }
 
@@ -1145,10 +1145,11 @@ func BenchmarkLogAttrs(b *testing.B) {
 		Name string
 		H    slog.Handler
 	}{
-		{"tint", tint.NewTextHandler(io.Discard, nil)},
+		{"tint-text", tint.NewTextHandler(io.Discard, nil)},
+		{"tint-json", tint.NewJSONHandler(io.Discard, nil)},
 		{"text", slog.NewTextHandler(io.Discard, nil)},
 		{"json", slog.NewJSONHandler(io.Discard, nil)},
-		{"discard", new(discarder)},
+		{"discard", discardHandler{}},
 	}
 
 	benchmarks := []struct {
@@ -1277,12 +1278,12 @@ func BenchmarkLogAttrs(b *testing.B) {
 }
 
 // discarder is a slog.Handler that discards all records.
-type discarder struct{}
+type discardHandler struct{}
 
-func (*discarder) Enabled(context.Context, slog.Level) bool   { return true }
-func (*discarder) Handle(context.Context, slog.Record) error  { return nil }
-func (d *discarder) WithAttrs(attrs []slog.Attr) slog.Handler { return d }
-func (d *discarder) WithGroup(name string) slog.Handler       { return d }
+func (dh discardHandler) Enabled(context.Context, slog.Level) bool  { return false }
+func (dh discardHandler) Handle(context.Context, slog.Record) error { return nil }
+func (dh discardHandler) WithAttrs(attrs []slog.Attr) slog.Handler  { return dh }
+func (dh discardHandler) WithGroup(name string) slog.Handler        { return dh }
 
 var (
 	testMessage  = "Test logging, but use a somewhat realistic message length."
