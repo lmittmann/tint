@@ -861,7 +861,7 @@ var (
 	}
 )
 
-func TestHandler(t *testing.T) {
+func TestTextHandler(t *testing.T) {
 	if now := time.Now(); !faketime.Equal(now) || now.Location().String() != "UTC" {
 		t.Skip(`run: TZ="" go test -tags=faketime`)
 	}
