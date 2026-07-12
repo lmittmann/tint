@@ -20,7 +20,7 @@ import (
 
 func Example() {
 	w := os.Stderr
-	logger := slog.New(tint.NewHandler(w, &tint.Options{
+	logger := slog.New(tint.NewTextHandler(w, &tint.Options{
 		Level:      slog.LevelDebug,
 		TimeFormat: time.Kitchen,
 	}))
@@ -34,7 +34,7 @@ func Example() {
 // Create a new logger that writes all errors in red:
 func Example_redErrors() {
 	w := os.Stderr
-	logger := slog.New(tint.NewHandler(w, &tint.Options{
+	logger := slog.New(tint.NewTextHandler(w, &tint.Options{
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			if a.Value.Kind() == slog.KindAny {
 				if _, ok := a.Value.Any().(error); ok {
@@ -53,7 +53,7 @@ func Example_traceLevel() {
 	const LevelTrace = slog.LevelDebug - 4
 
 	w := os.Stderr
-	logger := slog.New(tint.NewHandler(w, &tint.Options{
+	logger := slog.New(tint.NewTextHandler(w, &tint.Options{
 		Level: LevelTrace,
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			if a.Key == slog.LevelKey && len(groups) == 0 {
@@ -671,7 +671,7 @@ func TestHandler(t *testing.T) {
 			if test.Opts == nil {
 				test.Opts = &tint.Options{NoColor: true}
 			}
-			l := slog.New(tint.NewHandler(&buf, test.Opts))
+			l := slog.New(tint.NewTextHandler(&buf, test.Opts))
 			test.F(l)
 
 			got, foundNewline := strings.CutSuffix(buf.String(), "\n")
@@ -760,7 +760,7 @@ func TestHandler_Consistency(t *testing.T) {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			// log with tint.Handler
 			var tintBuf bytes.Buffer
-			tintLogger := slog.New(tint.NewHandler(&tintBuf, &tint.Options{
+			tintLogger := slog.New(tint.NewTextHandler(&tintBuf, &tint.Options{
 				NoColor:     true,
 				ReplaceAttr: rep,
 			}))
@@ -813,7 +813,7 @@ func TestReplaceAttr(t *testing.T) {
 			slogLogger.Log(context.TODO(), slog.LevelInfo, "", test...)
 
 			tintRecord := make([]replaceAttrParams, 0)
-			tintLogger := slog.New(tint.NewHandler(io.Discard, &tint.Options{
+			tintLogger := slog.New(tint.NewTextHandler(io.Discard, &tint.Options{
 				ReplaceAttr: replaceAttrRecorder(&tintRecord),
 			}))
 			tintLogger.Log(context.TODO(), slog.LevelInfo, "", test...)
@@ -865,7 +865,7 @@ func TestClonedHandlersSynchronizeWriter(t *testing.T) {
 		logger.Info("test")
 	}
 
-	logger := slog.New(tint.NewHandler(&bytes.Buffer{}, &tint.Options{}))
+	logger := slog.New(tint.NewTextHandler(&bytes.Buffer{}, &tint.Options{}))
 
 	// start and wait for two goroutines
 	var wg sync.WaitGroup
@@ -885,7 +885,7 @@ func BenchmarkLogAttrs(b *testing.B) {
 		Name string
 		H    slog.Handler
 	}{
-		{"tint", tint.NewHandler(io.Discard, nil)},
+		{"tint", tint.NewTextHandler(io.Discard, nil)},
 		{"text", slog.NewTextHandler(io.Discard, nil)},
 		{"json", slog.NewJSONHandler(io.Discard, nil)},
 		{"discard", new(discarder)},
