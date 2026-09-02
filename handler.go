@@ -119,6 +119,8 @@ const (
 
 	defaultLevel      = slog.LevelInfo
 	defaultTimeFormat = time.StampMilli
+
+	noColor int16 = -1
 )
 
 // Options for a slog.Handler that writes tinted logs. A zero Options consists
@@ -214,12 +216,12 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	// write time
 	if !r.Time.IsZero() {
 		if rep == nil {
-			h.appendTintTime(buf, r.Time, -1)
+			h.appendTintTime(buf, r.Time, noColor)
 			buf.WriteByte(' ')
 		} else {
 			val := r.Time.Round(0) // strip monotonic to match Attr behavior
 			if a := rep(nil /* groups */, slog.Time(slog.TimeKey, val)); a.Key != "" {
-				val, color := h.resolve(a.Value)
+				val, color := h.resolve(a.Value, noColor)
 				if val.Kind() == slog.KindTime {
 					h.appendTintTime(buf, val.Time(), color)
 				} else {
@@ -232,10 +234,10 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 
 	// write level
 	if rep == nil {
-		h.appendTintLevel(buf, r.Level, -1)
+		h.appendTintLevel(buf, r.Level, noColor)
 		buf.WriteByte(' ')
 	} else if a := rep(nil /* groups */, slog.Any(slog.LevelKey, r.Level)); a.Key != "" {
-		val, color := h.resolve(a.Value)
+		val, color := h.resolve(a.Value, noColor)
 		if val.Kind() == slog.KindAny {
 			if lvlVal, ok := val.Any().(slog.Level); ok {
 				h.appendTintLevel(buf, lvlVal, color)
@@ -269,7 +271,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 				}
 				buf.WriteByte(' ')
 			} else if a := rep(nil /* groups */, slog.Any(slog.SourceKey, src)); a.Key != "" {
-				val, color := h.resolve(a.Value)
+				val, color := h.resolve(a.Value, noColor)
 				h.appendTintValue(buf, val, false, color, true)
 				buf.WriteByte(' ')
 			}
@@ -281,7 +283,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		buf.WriteString(r.Message)
 		buf.WriteByte(' ')
 	} else if a := rep(nil /* groups */, slog.String(slog.MessageKey, r.Message)); a.Key != "" {
-		val, color := h.resolve(a.Value)
+		val, color := h.resolve(a.Value, noColor)
 		h.appendTintValue(buf, val, false, color, false)
 		buf.WriteByte(' ')
 	}
@@ -293,7 +295,7 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 
 	// write attributes
 	r.Attrs(func(attr slog.Attr) bool {
-		h.appendAttr(buf, attr, h.groupPrefix, h.groups)
+		h.appendAttr(buf, attr, h.groupPrefix, h.groups, noColor)
 		return true
 	})
 
@@ -321,7 +323,7 @@ func (h *handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 
 	// write attributes to buffer
 	for _, attr := range attrs {
-		h.appendAttr(buf, attr, h.groupPrefix, h.groups)
+		h.appendAttr(buf, attr, h.groupPrefix, h.groups, noColor)
 	}
 	h2.attrsPrefix = h.attrsPrefix + string(*buf)
 	return h2
@@ -401,25 +403,20 @@ func appendSource(buf *buffer, src *slog.Source) {
 	*buf = strconv.AppendInt(*buf, int64(src.Line), 10)
 }
 
-func (h *handler) resolve(val slog.Value) (resolvedVal slog.Value, color int16) {
+func (h *handler) resolve(val slog.Value, inheritedColor int16) (resolvedVal slog.Value, color int16) {
 	if !h.opts.NoColor && val.Kind() == slog.KindLogValuer {
 		if tintVal, ok := val.Any().(tintValue); ok {
 			return tintVal.Value.Resolve(), int16(tintVal.Color)
 		}
 	}
-	return val.Resolve(), -1
+	return val.Resolve(), inheritedColor
 }
 
-func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, groups []string) {
-	var color int16 // -1 if no color
-	attr.Value, color = h.resolve(attr.Value)
+func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, groups []string, color int16) {
+	attr.Value, color = h.resolve(attr.Value, color)
 	if rep := h.opts.ReplaceAttr; rep != nil && attr.Value.Kind() != slog.KindGroup {
 		attr = rep(groups, attr)
-		var colorRep int16
-		attr.Value, colorRep = h.resolve(attr.Value)
-		if colorRep >= 0 {
-			color = colorRep
-		}
+		attr.Value, color = h.resolve(attr.Value, color)
 	}
 
 	if attr.Equal(slog.Attr{}) {
@@ -432,7 +429,7 @@ func (h *handler) appendAttr(buf *buffer, attr slog.Attr, groupsPrefix string, g
 			groups = append(groups, attr.Key)
 		}
 		for _, groupAttr := range attr.Value.Group() {
-			h.appendAttr(buf, groupAttr, groupsPrefix, groups)
+			h.appendAttr(buf, groupAttr, groupsPrefix, groups, color)
 		}
 		return
 	}
