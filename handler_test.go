@@ -352,6 +352,13 @@ var (
 			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;38;5;226mkey=\033[22mvalue\033[0m",
 		},
 		{
+			Opts: &tint.Options{NoColor: false},
+			F: func(l *slog.Logger) {
+				l.Info("test", tint.Attr(10, slog.Group("test", slog.String("key", "val"), tint.Err(errors.New("fail")))))
+			},
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;92mtest.key=\033[22mval\033[0m \033[2;91mtest.err=\033[22mfail\033[0m",
+		},
+		{
 			Opts: &tint.Options{
 				NoColor: false,
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
@@ -410,7 +417,7 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[2;92mtint/handler_test.go:411\033[0m test",
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m \033[2;92mtint/handler_test.go:418\033[0m test",
 		},
 		{
 			Opts: &tint.Options{
@@ -540,7 +547,7 @@ var (
 			F: func(l *slog.Logger) {
 				l.Info("test")
 			},
-			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:541 test`,
+			Want: `Nov 10 23:00:00.000 INF tint/handler_test.go:548 test`,
 		},
 		{ // https://github.com/lmittmann/tint/issues/44
 			F: func(l *slog.Logger) {
@@ -648,7 +655,7 @@ var (
 			F: func(l *slog.Logger) {
 				l.Debug("test")
 			},
-			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mDBG\033[0m \033[2mtint/handler_test.go:649\033[0m test",
+			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[95mDBG\033[0m \033[2mtint/handler_test.go:656\033[0m test",
 		},
 		{ // https://github.com/lmittmann/tint/pull/103
 			Opts: &tint.Options{NoColor: true},
