@@ -610,14 +610,11 @@ func appendString(buf *buffer, s string, quote, color bool) {
 }
 
 func cut(s string, f func(r rune) bool) string {
-	var res []rune
+	var res []byte
 	for i := 0; i < len(s); {
 		r, size := utf8.DecodeRuneInString(s[i:])
-		if r == utf8.RuneError {
-			break
-		}
 		if !f(r) {
-			res = append(res, r)
+			res = append(res, s[i:i+size]...)
 		}
 		i += size
 	}
