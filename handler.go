@@ -97,6 +97,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -335,7 +336,10 @@ func (h *handler) WithGroup(name string) slog.Handler {
 	}
 	h2 := h.clone()
 	h2.groupPrefix += name + "."
-	h2.groups = append(h2.groups, name)
+	// Clip so that the groups slice never has spare capacity. Otherwise sibling
+	// handlers and concurrent calls to Handle would append into the same
+	// backing array.
+	h2.groups = slices.Clip(append(h2.groups, name))
 	return h2
 }
 

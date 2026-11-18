@@ -834,6 +834,52 @@ func TestReplaceAttr(t *testing.T) {
 	}
 }
 
+// TestReplaceAttrGroupsOfSiblingHandlers tests that handlers derived from the
+// same parent with WithGroup pass their own groups to ReplaceAttr.
+func TestReplaceAttrGroupsOfSiblingHandlers(t *testing.T) {
+	var gotGroups [][]string
+	logger := slog.New(tint.NewTextHandler(io.Discard, &tint.Options{
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == "key" {
+				gotGroups = append(gotGroups, slices.Clone(groups))
+			}
+			return a
+		},
+	}))
+
+	parent := logger.WithGroup("a").WithGroup("b").WithGroup("c")
+	x := parent.WithGroup("x")
+	y := parent.WithGroup("y")
+	x.Info("test", "key", "val")
+	y.Info("test", "key", "val")
+	parent.Info("test", slog.Group("z", "key", "val"))
+	x.Info("test", "key", "val")
+
+	want := [][]string{{"a", "b", "c", "x"}, {"a", "b", "c", "y"}, {"a", "b", "c", "z"}, {"a", "b", "c", "x"}}
+	if !slices.EqualFunc(want, gotGroups, func(a, b []string) bool { return slices.Equal(a, b) }) {
+		t.Fatalf("(-want +got)\n- %v\n+ %v", want, gotGroups)
+	}
+}
+
+// TestConcurrentGroupAttrs tests that a handler with groups can log group
+// attributes from multiple goroutines (run with -race).
+func TestConcurrentGroupAttrs(t *testing.T) {
+	logger := slog.New(tint.NewTextHandler(io.Discard, &tint.Options{})).
+		WithGroup("a").WithGroup("b").WithGroup("c")
+
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			for j := 0; j < 100; j++ {
+				logger.Info("test", slog.Group("group", "key", i))
+			}
+		}(i)
+	}
+	wg.Wait()
+}
+
 func TestAttr(t *testing.T) {
 	if now := time.Now(); !faketime.Equal(now) || now.Location().String() != "UTC" {
 		t.Skip(`run: TZ="" go test -tags=faketime`)
