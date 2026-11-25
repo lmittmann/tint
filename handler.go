@@ -335,7 +335,11 @@ func (h *handler) WithGroup(name string) slog.Handler {
 	}
 	h2 := h.clone()
 	h2.groupPrefix += name + "."
-	h2.groups = append(h2.groups, name)
+	// Copy so sibling handlers created from the same parent do not share the
+	// backing array of groups.
+	h2.groups = make([]string, len(h.groups)+1)
+	copy(h2.groups, h.groups)
+	h2.groups[len(h.groups)] = name
 	return h2
 }
 
