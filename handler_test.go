@@ -664,7 +664,7 @@ var (
 			},
 			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;92mtest.key=\033[22mval\033[0m \033[2;91mtest.err=\033[22mfail\033[0m",
 		},
-		{ // https://github.com/lmittmann/tint/issues/117
+		{ // https://github.com/lmittmann/tint/pull/117
 			Opts: &tint.Options{
 				NoColor: true,
 				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
@@ -681,6 +681,13 @@ var (
 				secret.Info("test", "key", "val")
 			},
 			Want: `Nov 10 23:00:00.000 INF test a.b.c.secret.key=***`,
+		},
+		{ // https://github.com/lmittmann/tint/pull/118
+			Opts: &tint.Options{NoColor: true},
+			F: func(l *slog.Logger) {
+				l.Info("test", "key", "\033[31mbefore\xffafter\033[0m")
+			},
+			Want: `Nov 10 23:00:00.000 INF test key="before\xffafter"`,
 		},
 	}
 )

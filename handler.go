@@ -582,7 +582,7 @@ func appendAnsi(buf *buffer, color uint8, faint bool) {
 }
 
 func appendString(buf *buffer, s string, quote, color bool) {
-	if quote && !color {
+	if quote && !color && strings.IndexByte(s, ansiEsc) >= 0 {
 		// trim ANSI escape sequences
 		var inEscape bool
 		s = cut(s, func(r rune) bool {
@@ -611,14 +611,11 @@ func appendString(buf *buffer, s string, quote, color bool) {
 }
 
 func cut(s string, f func(r rune) bool) string {
-	var res []rune
+	res := make([]byte, 0, len(s))
 	for i := 0; i < len(s); {
 		r, size := utf8.DecodeRuneInString(s[i:])
-		if r == utf8.RuneError {
-			break
-		}
 		if !f(r) {
-			res = append(res, r)
+			res = append(res, s[i:i+size]...)
 		}
 		i += size
 	}
