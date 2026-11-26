@@ -97,6 +97,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -335,7 +336,7 @@ func (h *handler) WithGroup(name string) slog.Handler {
 	}
 	h2 := h.clone()
 	h2.groupPrefix += name + "."
-	h2.groups = append(h2.groups, name)
+	h2.groups = slices.Clip(append(h2.groups, name))
 	return h2
 }
 
