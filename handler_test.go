@@ -664,6 +664,24 @@ var (
 			},
 			Want: "\033[2mNov 10 23:00:00.000\033[0m \033[92mINF\033[0m test \033[2;92mtest.key=\033[22mval\033[0m \033[2;91mtest.err=\033[22mfail\033[0m",
 		},
+		{ // https://github.com/lmittmann/tint/issues/117
+			Opts: &tint.Options{
+				NoColor: true,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if slices.Contains(groups, "secret") {
+						return slog.String(a.Key, "***")
+					}
+					return a
+				},
+			},
+			F: func(l *slog.Logger) {
+				l = l.WithGroup("a").WithGroup("b").WithGroup("c")
+				secret := l.WithGroup("secret")
+				l.WithGroup("public") // sibling of secret
+				secret.Info("test", "key", "val")
+			},
+			Want: `Nov 10 23:00:00.000 INF test a.b.c.secret.key=***`,
+		},
 	}
 )
 
